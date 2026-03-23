@@ -1,0 +1,132 @@
+/// <reference path="../pb_data/types.d.ts" />
+migrate((app) => {
+  // Récupérer l'utilisateur pro
+  const usersCollection = app.findCollectionByNameOrId("users");
+  const pro = app.findFirstRecordByFilter("users", "email = 'pro@nutrirecette.com'");
+  
+  if (!pro) {
+    throw new Error("Utilisateur pro non trouvé");
+  }
+
+  const proId = pro.id;
+  
+  // ========== Créer des aliments ==========
+  const alimentCollection = app.findCollectionByNameOrId("aliment");
+  
+  const aliments = [
+    { nom: "Riz blanc", calories_100g: 130, glucides: 28, proteines: 2.7, lipides: 0.3, fibres: 0.4 },
+    { nom: "Poulet blanc", calories_100g: 165, proteines: 31, glucides: 0, lipides: 3.6, fibres: 0 },
+    { nom: "Brocoli", calories_100g: 34, proteines: 2.8, glucides: 7, lipides: 0.4, fibres: 2.4 },
+    { nom: "Oeufs", calories_100g: 155, proteines: 13, glucides: 1.1, lipides: 11, fibres: 0 },
+    { nom: "Saumon", calories_100g: 208, proteines: 20, glucides: 0, lipides: 13, fibres: 0 },
+    { nom: "Tomate", calories_100g: 18, proteines: 0.9, glucides: 3.9, lipides: 0.2, fibres: 1.2 },
+    { nom: "Carotte", calories_100g: 41, proteines: 0.9, glucides: 10, lipides: 0.2, fibres: 2.8 },
+    { nom: "Fromage blanc", calories_100g: 79, proteines: 11, glucides: 3.6, lipides: 3.2, fibres: 0 },
+    { nom: "Pâtes complètes", calories_100g: 124, proteines: 5.3, glucides: 25, lipides: 1.1, fibres: 1.8 },
+    { nom: "Amandes", calories_100g: 579, proteines: 21, glucides: 22, lipides: 50, fibres: 12.5 }
+  ];
+  
+  const alimentIds = [];
+  aliments.forEach(aliment => {
+    const record = new Record(alimentCollection, {
+      ...aliment,
+      auteur_id: proId
+    });
+    app.save(record);
+    alimentIds.push(record.id);
+  });
+
+  // ========== Créer des recettes avec selects ==========
+  const recetteCollection = app.findCollectionByNameOrId("recette");
+  
+  const recettes = [
+    {
+      nom: "Poulet riz brocoli",
+      description: "Plat équilibré idéal pour la musculation",
+      temps_preparation: 10,
+      temps_cuisson: 30,
+      nb_parts: 1,
+      calories_par_part: 450,
+      statut: "approuve",
+      instructions: "<p>1. Cuire le riz<br/>2. Cuire le poulet à la poêle<br/>3. Cuire le brocoli à la vapeur<br/>4. Assembler le plat</p>",
+      categorie: "Déjeuner",
+      objectif: "Prise de muscle",
+      regime: "Méditerranéen",
+      auteur_id: proId,
+      ingredients: JSON.stringify([
+        { nom: "Riz blanc", quantite: 100, unite: "g" },
+        { nom: "Poulet blanc", quantite: 150, unite: "g" },
+        { nom: "Brocoli", quantite: 200, unite: "g" }
+      ])
+    },
+    {
+      nom: "Oeufs tomate",
+      description: "Petit-déjeuner riche en protéines",
+      temps_preparation: 5,
+      temps_cuisson: 10,
+      nb_parts: 1,
+      calories_par_part: 220,
+      statut: "approuve",
+      instructions: "<p>1. Faire revenir la tomate<br/>2. Ajouter les oeufs<br/>3. Cuire 3-4 minutes</p>",
+      categorie: "Petit-déjeuner",
+      objectif: "Prise de muscle",
+      regime: "Végétarien",
+      auteur_id: proId,
+      ingredients: JSON.stringify([
+        { nom: "Oeufs", quantite: 2, unite: "piece" },
+        { nom: "Tomate", quantite: 150, unite: "g" }
+      ])
+    },
+    {
+      nom: "Saumon légumes",
+      description: "Riche en oméga-3",
+      temps_preparation: 15,
+      temps_cuisson: 20,
+      nb_parts: 2,
+      calories_par_part: 380,
+      statut: "approuve",
+      instructions: "<p>1. Préchauffer four 200°C<br/>2. Placer le saumon<br/>3. Cuire 15-20 min</p>",
+      categorie: "Déjeuner",
+      objectif: "Santé générale",
+      regime: "Méditerranéen",
+      auteur_id: proId,
+      ingredients: JSON.stringify([
+        { nom: "Saumon", quantite: 200, unite: "g" },
+        { nom: "Carotte", quantite: 150, unite: "g" }
+      ])
+    }
+  ];
+  
+  recettes.forEach(recette => {
+    const record = new Record(recetteCollection, recette);
+    app.save(record);
+  });
+
+  // ========== Créer des conseils ==========
+  const conseilCollection = app.findCollectionByNameOrId("conseil");
+  
+  const conseils = [
+    {
+      titre: "Les bases de la nutrition sportive",
+      contenu: "<p>Pour progresser en musculation, l'alimentation doit fournir:\n- Protéines: 1.6-2g par kg de poids\n- Glucides complexes avant l'entraînement\n- Lipides insaturés régulièrement</p>",
+      statut: "publie",
+      date_publication: new Date().toISOString().split('T')[0],
+      auteur_id: proId
+    },
+    {
+      titre: "Hydratation et performance",
+      contenu: "<p>Boire régulièrement tout au long de la journée améliore:\n- La concentration\n- Les performances sportives\n- La récupération musculaire</p>",
+      statut: "publie",
+      date_publication: new Date().toISOString().split('T')[0],
+      auteur_id: proId
+    }
+  ];
+  
+  conseils.forEach(conseil => {
+    const record = new Record(conseilCollection, conseil);
+    app.save(record);
+  });
+
+}, (app) => {
+  // Rollback
+});

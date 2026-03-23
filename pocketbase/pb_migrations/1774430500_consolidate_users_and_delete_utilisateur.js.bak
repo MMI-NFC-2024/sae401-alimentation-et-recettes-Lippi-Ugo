@@ -1,0 +1,64 @@
+/// <reference path="../pb_data/types.d.ts" />
+migrate((app) => {
+  // ========== Mettre à jour aliment ==========
+  const aliment = app.findCollectionByNameOrId("aliment");
+  aliment.fields.removeById("relation1622896614"); // auteur_id ancien
+  aliment.fields.add(new Field({
+    "name": "auteur_id",
+    "type": "relation",
+    "collectionId": "_pb_users_auth_",
+    "required": true
+  }));
+  app.save(aliment);
+
+  // ========== Mettre à jour recette ==========
+  const recette = app.findCollectionByNameOrId("recette");
+  recette.fields.removeById("relation1622896614"); // auteur_id ancien
+  if (recette.fields.getById("relation2301871154")) {
+    recette.fields.removeById("relation2301871154"); // favoris ancien
+  }
+  recette.fields.add(new Field({
+    "name": "auteur_id",
+    "type": "relation",
+    "collectionId": "_pb_users_auth_",
+    "required": true
+  }));
+  recette.fields.add(new Field({
+    "name": "favoris",
+    "type": "relation",
+    "collectionId": "_pb_users_auth_",
+    "required": false
+  }));
+  app.save(recette);
+
+  // ========== Mettre à jour suivi_utilisateur ==========
+  const suivi = app.findCollectionByNameOrId("suivi_utilisateur");
+  suivi.fields.removeById("relation4220051791"); // utilisateur_id ancien
+  suivi.fields.add(new Field({
+    "name": "utilisateur_id",
+    "type": "relation",
+    "collectionId": "_pb_users_auth_",
+    "required": true
+  }));
+  app.save(suivi);
+
+  // ========== Mettre à jour conseil ==========
+  const conseil = app.findCollectionByNameOrId("conseil");
+  conseil.fields.removeById("relation1622896614"); // auteur_id ancien
+  conseil.fields.add(new Field({
+    "name": "auteur_id",
+    "type": "relation",
+    "collectionId": "_pb_users_auth_",
+    "required": true
+  }));
+  app.save(conseil);
+
+  // ========== Supprimer la collection utilisateur ==========
+  const utilisateur = app.findCollectionByNameOrId("utilisateur");
+  if (utilisateur) {
+    app.delete(utilisateur);
+  }
+
+}, (app) => {
+  // Rollback - rien à faire
+});

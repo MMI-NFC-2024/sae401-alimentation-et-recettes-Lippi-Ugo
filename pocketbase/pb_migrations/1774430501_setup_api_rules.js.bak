@@ -1,0 +1,93 @@
+/// <reference path="../pb_data/types.d.ts" />
+migrate((app) => {
+  // ========== USERS ==========
+  const users = app.findCollectionByNameOrId("users");
+  users.listRule = "id = @request.auth.id || @request.auth.role = 'admin'";
+  users.viewRule = "id = @request.auth.id || @request.auth.role = 'admin'";
+  users.createRule = ""; // Public signup
+  users.updateRule = "id = @request.auth.id || @request.auth.role = 'admin'";
+  users.deleteRule = "@request.auth.role = 'admin'";
+  app.save(users);
+
+  // ========== ALIMENT ==========
+  const aliment = app.findCollectionByNameOrId("aliment");
+  aliment.listRule = "true"; // Tous lisent
+  aliment.viewRule = "true"; // Tous lisent
+  aliment.createRule = "@request.auth.role = 'pro' || @request.auth.role = 'admin'";
+  aliment.updateRule = "@request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  aliment.deleteRule = "@request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  app.save(aliment);
+
+  // ========== RECETTE ==========
+  const recette = app.findCollectionByNameOrId("recette");
+  recette.listRule = "statut = 'approuve' || @request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  recette.viewRule = "statut = 'approuve' || @request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  recette.createRule = "@request.auth.role = 'pro' || @request.auth.role = 'admin'";
+  recette.updateRule = "@request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  recette.deleteRule = "@request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  app.save(recette);
+
+  // ========== COMPOSER_QUANTITE ==========
+  const composer = app.findCollectionByNameOrId("composer_quantite");
+  composer.listRule = "recette_id.statut = 'approuve' || @request.auth.id = recette_id.auteur_id || @request.auth.role = 'admin'";
+  composer.viewRule = "recette_id.statut = 'approuve' || @request.auth.id = recette_id.auteur_id || @request.auth.role = 'admin'";
+  composer.createRule = "@request.auth.role = 'pro' || @request.auth.role = 'admin'";
+  composer.updateRule = "@request.auth.id = recette_id.auteur_id || @request.auth.role = 'admin'";
+  composer.deleteRule = "@request.auth.id = recette_id.auteur_id || @request.auth.role = 'admin'";
+  app.save(composer);
+
+  // ========== CONSEIL ==========
+  const conseil = app.findCollectionByNameOrId("conseil");
+  conseil.listRule = "statut = 'publie' || @request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  conseil.viewRule = "statut = 'publie' || @request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  conseil.createRule = "@request.auth.role = 'pro' || @request.auth.role = 'admin'";
+  conseil.updateRule = "@request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  conseil.deleteRule = "@request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  app.save(conseil);
+
+  // ========== SUIVI_UTILISATEUR (utilisateur seul) ==========
+  const suivi = app.findCollectionByNameOrId("suivi_utilisateur");
+  suivi.listRule = "@request.auth.id = utilisateur_id || @request.auth.role = 'admin'";
+  suivi.viewRule = "@request.auth.id = utilisateur_id || @request.auth.role = 'admin'";
+  suivi.createRule = "@request.auth.id = utilisateur_id || @request.auth.role = 'admin'";
+  suivi.updateRule = "@request.auth.id = utilisateur_id || @request.auth.role = 'admin'";
+  suivi.deleteRule = "@request.auth.id = utilisateur_id || @request.auth.role = 'admin'";
+  app.save(suivi);
+
+  // ========== CATÉGORIES & RÉGIMES & OBJECTIFS (admin manage, tous lisent) ==========
+  const categorie = app.findCollectionByNameOrId("categorie_recette");
+  categorie.listRule = "true";
+  categorie.viewRule = "true";
+  categorie.createRule = "@request.auth.role = 'admin'";
+  categorie.updateRule = "@request.auth.role = 'admin'";
+  categorie.deleteRule = "@request.auth.role = 'admin'";
+  app.save(categorie);
+
+  const regime = app.findCollectionByNameOrId("regime_alimentaire");
+  regime.listRule = "true";
+  regime.viewRule = "true";
+  regime.createRule = "@request.auth.role = 'admin'";
+  regime.updateRule = "@request.auth.role = 'admin'";
+  regime.deleteRule = "@request.auth.role = 'admin'";
+  app.save(regime);
+
+  const objectif = app.findCollectionByNameOrId("objectif_nutritionnel");
+  objectif.listRule = "true";
+  objectif.viewRule = "true";
+  objectif.createRule = "@request.auth.role = 'admin'";
+  objectif.updateRule = "@request.auth.role = 'admin'";
+  objectif.deleteRule = "@request.auth.role = 'admin'";
+  app.save(objectif);
+
+  // ========== PRODUIT_SPONSORISÉ ==========
+  const produit = app.findCollectionByNameOrId("produit_sponsorise");
+  produit.listRule = "true";
+  produit.viewRule = "true";
+  produit.createRule = "@request.auth.role = 'admin'";
+  produit.updateRule = "@request.auth.role = 'admin'";
+  produit.deleteRule = "@request.auth.role = 'admin'";
+  app.save(produit);
+
+}, (app) => {
+  // Rollback - reset rules
+});

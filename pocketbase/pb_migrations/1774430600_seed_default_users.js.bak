@@ -1,0 +1,52 @@
+/// <reference path="../pb_data/types.d.ts" />
+migrate((app) => {
+  const collection = app.findCollectionByNameOrId("users");
+  
+  // Créer un administrateur par défaut
+  const admin = new Record(collection, {
+    email: "admin@nutrirecette.com",
+    password: "Admin2026!",
+    name: "Admin",
+    prenom: "Système",
+    role: "admin",
+    sexe: "Homme"
+  });
+  
+  app.save(admin);
+
+  // Créer un pro par défaut
+  const pro = new Record(collection, {
+    email: "pro@nutrirecette.com",
+    password: "Pro2026!",
+    name: "Chef",
+    prenom: "Nutritionnel",
+    role: "pro",
+    sexe: "Femme"
+  });
+  
+  app.save(pro);
+
+  // Créer un utilisateur de test
+  const user = new Record(collection, {
+    email: "user@nutrirecette.com",
+    password: "User2026!",
+    name: "Jean",
+    prenom: "Dupont",
+    role: "utilisateur",
+    sexe: "Homme",
+    age: 28
+  });
+  
+  app.save(user);
+
+}, (app) => {
+  // Rollback
+  const collection = app.findCollectionByNameOrId("users");
+  const admin = app.findRecordById(collection, "admin@nutrirecette.com");
+  const pro = app.findRecordById(collection, "pro@nutrirecette.com");
+  const user = app.findRecordById(collection, "user@nutrirecette.com");
+  
+  if (admin) app.delete(admin);
+  if (pro) app.delete(pro);
+  if (user) app.delete(user);
+});

@@ -1,0 +1,311 @@
+/// <reference path="../pb_data/types.d.ts" />
+migrate((app) => {
+  // ========== 1. Ajouter les champs à users ==========
+  const users = app.findCollectionByNameOrId("users");
+  
+  users.fields.add(new Field({
+    "name": "prenom",
+    "type": "text",
+    "required": false
+  }));
+
+  users.fields.add(new Field({
+    "name": "age",
+    "type": "number",
+    "required": false
+  }));
+
+  users.fields.add(new Field({
+    "name": "sexe",
+    "type": "select",
+    "values": ["Homme", "Femme", "Autre"],
+    "required": false
+  }));
+
+  users.fields.add(new Field({
+    "name": "role",
+    "type": "select",
+    "values": ["utilisateur", "pro", "admin"],
+    "required": true
+  }));
+
+  users.fields.add(new Field({
+    "name": "amis",
+    "type": "relation",
+    "collectionId": "_pb_users_auth_",
+    "required": false
+  }));
+
+  app.save(users);
+
+  // ========== 2. Supprimer la collection utilisateur ==========
+  try {
+    const utilisateur = app.findCollectionByNameOrId("utilisateur");
+    if (utilisateur) {
+      app.delete(utilisateur);
+    }
+  } catch (e) {
+    // La collection n'existe pas, c'est ok
+  }
+
+  // ========== 3. Recréer aliment pointant vers users ==========
+  try {
+    const alimentOld = app.findCollectionByNameOrId("aliment");
+    if (alimentOld) {
+      app.delete(alimentOld);
+    }
+  } catch (e) {}
+
+  const aliment = new Collection({
+    "name": "aliment",
+    "type": "base",
+    "fields": [
+      new Field({ "name": "nom", "type": "text", "required": true }),
+      new Field({ "name": "calories_100g", "type": "number", "required": true }),
+      new Field({ "name": "proteines", "type": "number", "required": false }),
+      new Field({ "name": "glucides", "type": "number", "required": false }),
+      new Field({ "name": "lipides", "type": "number", "required": false }),
+      new Field({ "name": "fibres", "type": "number", "required": false }),
+      new Field({ "name": "image", "type": "file", "required": false }),
+      new Field({ 
+        "name": "auteur_id", 
+        "type": "relation", 
+        "collectionId": "_pb_users_auth_",
+        "required": true 
+      })
+    ]
+  });
+  app.save(aliment);
+
+  // ========== 4. Recréer regime_alimentaire ==========
+  try {
+    const regimeOld = app.findCollectionByNameOrId("regime_alimentaire");
+    if (regimeOld) {
+      app.delete(regimeOld);
+    }
+  } catch (e) {}
+
+  const regime = new Collection({
+    "name": "regime_alimentaire",
+    "type": "base",
+    "fields": [
+      new Field({ "name": "nom", "type": "text", "required": true }),
+      new Field({ 
+        "name": "aliments", 
+        "type": "relation", 
+        "collectionId": "aliment",
+        "required": false 
+      })
+    ]
+  });
+  app.save(regime);
+
+  // ========== 5. Recréer categorie_recette ==========
+  try {
+    const categorieOld = app.findCollectionByNameOrId("categorie_recette");
+    if (categorieOld) {
+      app.delete(categorieOld);
+    }
+  } catch (e) {}
+
+  const categorie = new Collection({
+    "name": "categorie_recette",
+    "type": "base",
+    "fields": [
+      new Field({ "name": "nom", "type": "text", "required": true })
+    ]
+  });
+  app.save(categorie);
+
+  // ========== 6. Recréer objectif_nutritionnel ==========
+  try {
+    const objectifOld = app.findCollectionByNameOrId("objectif_nutritionnel");
+    if (objectifOld) {
+      app.delete(objectifOld);
+    }
+  } catch (e) {}
+
+  const objectif = new Collection({
+    "name": "objectif_nutritionnel",
+    "type": "base",
+    "fields": [
+      new Field({ "name": "nom", "type": "text", "required": true })
+    ]
+  });
+  app.save(objectif);
+
+  // ========== 7. Recréer recette pointant vers users ==========
+  try {
+    const recetteOld = app.findCollectionByNameOrId("recette");
+    if (recetteOld) {
+      app.delete(recetteOld);
+    }
+  } catch (e) {}
+
+  const recette = new Collection({
+    "name": "recette",
+    "type": "base",
+    "fields": [
+      new Field({ "name": "nom", "type": "text", "required": true }),
+      new Field({ "name": "description", "type": "text", "required": false }),
+      new Field({ "name": "image", "type": "file", "required": false }),
+      new Field({ "name": "temps_preparation", "type": "number", "required": false }),
+      new Field({ "name": "temps_cuisson", "type": "number", "required": false }),
+      new Field({ "name": "nb_parts", "type": "number", "required": false }),
+      new Field({ "name": "instructions", "type": "editor", "required": false }),
+      new Field({ "name": "calories_par_part", "type": "number", "required": false }),
+      new Field({ 
+        "name": "auteur_id", 
+        "type": "relation", 
+        "collectionId": "_pb_users_auth_",
+        "required": true 
+      }),
+      new Field({ 
+        "name": "categorie_id", 
+        "type": "relation", 
+        "collectionId": "categorie_recette",
+        "required": false 
+      }),
+      new Field({ 
+        "name": "regime_id", 
+        "type": "relation", 
+        "collectionId": "regime_alimentaire",
+        "required": false 
+      }),
+      new Field({ 
+        "name": "objectif_id", 
+        "type": "relation", 
+        "collectionId": "objectif_nutritionnel",
+        "required": false 
+      }),
+      new Field({ 
+        "name": "favoris", 
+        "type": "relation", 
+        "collectionId": "_pb_users_auth_",
+        "required": false 
+      }),
+      new Field({ 
+        "name": "statut", 
+        "type": "select", 
+        "values": ["draft", "approuve", "rejete"],
+        "required": true 
+      })
+    ]
+  });
+  app.save(recette);
+
+  // ========== 8. Recréer composer_quantite ==========
+  try {
+    const composerOld = app.findCollectionByNameOrId("composer_quantite");
+    if (composerOld) {
+      app.delete(composerOld);
+    }
+  } catch (e) {}
+
+  const composer = new Collection({
+    "name": "composer_quantite",
+    "type": "base",
+    "fields": [
+      new Field({ 
+        "name": "recette_id", 
+        "type": "relation", 
+        "collectionId": "recette",
+        "required": true 
+      }),
+      new Field({ 
+        "name": "aliment_id", 
+        "type": "relation", 
+        "collectionId": "aliment",
+        "required": true 
+      }),
+      new Field({ "name": "quantite", "type": "number", "required": true }),
+      new Field({ 
+        "name": "unite", 
+        "type": "select", 
+        "values": ["g", "ml", "cs", "cc", "piece"],
+        "required": true 
+      })
+    ]
+  });
+  app.save(composer);
+
+  // ========== 9. Recréer suivi_utilisateur pointant vers users ==========
+  try {
+    const suiviOld = app.findCollectionByNameOrId("suivi_utilisateur");
+    if (suiviOld) {
+      app.delete(suiviOld);
+    }
+  } catch (e) {}
+
+  const suivi = new Collection({
+    "name": "suivi_utilisateur",
+    "type": "base",
+    "fields": [
+      new Field({ 
+        "name": "utilisateur_id", 
+        "type": "relation", 
+        "collectionId": "_pb_users_auth_",
+        "required": true 
+      }),
+      new Field({ "name": "taille_cm", "type": "number", "required": false }),
+      new Field({ "name": "poids", "type": "number", "required": false }),
+      new Field({ "name": "notes", "type": "editor", "required": false }),
+      new Field({ "name": "date_suivi", "type": "date", "required": false })
+    ]
+  });
+  app.save(suivi);
+
+  // ========== 10. Recréer conseil pointant vers users ==========
+  try {
+    const conseilOld = app.findCollectionByNameOrId("conseil");
+    if (conseilOld) {
+      app.delete(conseilOld);
+    }
+  } catch (e) {}
+
+  const conseil = new Collection({
+    "name": "conseil",
+    "type": "base",
+    "fields": [
+      new Field({ 
+        "name": "auteur_id", 
+        "type": "relation", 
+        "collectionId": "_pb_users_auth_",
+        "required": true 
+      }),
+      new Field({ "name": "titre", "type": "text", "required": true }),
+      new Field({ "name": "contenu", "type": "editor", "required": true }),
+      new Field({ "name": "date_publication", "type": "date", "required": false }),
+      new Field({ 
+        "name": "statut", 
+        "type": "select", 
+        "values": ["draft", "publie", "archive"],
+        "required": true 
+      })
+    ]
+  });
+  app.save(conseil);
+
+  // ========== 11. Recréer produit_sponsorise ==========
+  try {
+    const produitOld = app.findCollectionByNameOrId("produit_sponsorise");
+    if (produitOld) {
+      app.delete(produitOld);
+    }
+  } catch (e) {}
+
+  const produit = new Collection({
+    "name": "produit_sponsorise",
+    "type": "base",
+    "fields": [
+      new Field({ "name": "nom", "type": "text", "required": true }),
+      new Field({ "name": "marque", "type": "text", "required": false }),
+      new Field({ "name": "lien_affiliation", "type": "url", "required": false }),
+      new Field({ "name": "image", "type": "file", "required": false })
+    ]
+  });
+  app.save(produit);
+
+}, (app) => {
+  // Rollback empty - on garde juste users modifié
+});

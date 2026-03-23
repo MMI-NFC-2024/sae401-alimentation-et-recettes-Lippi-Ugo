@@ -1,0 +1,94 @@
+/// <reference path="../pb_data/types.d.ts" />
+migrate((app) => {
+  // ========== Supprimer les vieilles collections de référence ==========
+  try {
+    const categorie = app.findCollectionByNameOrId("categorie_recette");
+    if (categorie) app.delete(categorie);
+  } catch (e) {}
+  
+  try {
+    const regime = app.findCollectionByNameOrId("regime_alimentaire");
+    if (regime) app.delete(regime);
+  } catch (e) {}
+  
+  try {
+    const objectif = app.findCollectionByNameOrId("objectif_nutritionnel");
+    if (objectif) app.delete(objectif);
+  } catch (e) {}
+
+  // ========== Supprimer la vieille collection recette ==========
+  try {
+    const recetteOld = app.findCollectionByNameOrId("recette");
+    if (recetteOld) app.delete(recetteOld);
+  } catch (e) {}
+
+  // ========== Supprimer composer_quantite (qui référençait recette) ==========
+  try {
+    const composer = app.findCollectionByNameOrId("composer_quantite");
+    if (composer) app.delete(composer);
+  } catch (e) {}
+
+  // ========== Créer la nouvelle recette avec selects ==========
+  const recette = new Collection({
+    "name": "recette",
+    "type": "base",
+    "fields": [
+      new Field({ "name": "nom", "type": "text", "required": true }),
+      new Field({ "name": "description", "type": "text", "required": false }),
+      new Field({ "name": "image", "type": "file", "required": false }),
+      new Field({ "name": "temps_preparation", "type": "number", "required": false }),
+      new Field({ "name": "temps_cuisson", "type": "number", "required": false }),
+      new Field({ "name": "nb_parts", "type": "number", "required": false }),
+      new Field({ "name": "instructions", "type": "editor", "required": false }),
+      new Field({ "name": "calories_par_part", "type": "number", "required": false }),
+      new Field({ 
+        "name": "auteur_id", 
+        "type": "relation", 
+        "collectionId": "_pb_users_auth_",
+        "required": true 
+      }),
+      new Field({
+        "name": "categorie",
+        "type": "select",
+        "values": ["Petit-déjeuner", "Déjeuner", "Dîner", "Collation", "Dessert", "Sauce & Condiment"],
+        "required": false
+      }),
+      new Field({
+        "name": "regime",
+        "type": "select",
+        "values": ["Sans gluten", "Végétarien", "Vegan", "Keto", "Low carb", "Paléo", "Méditerranéen"],
+        "required": false
+      }),
+      new Field({
+        "name": "objectif",
+        "type": "select",
+        "values": ["Perte de poids", "Prise de muscle", "Maintien du poids", "Santé générale", "Détox", "Énergie", "Performance sportive"],
+        "required": false
+      }),
+      new Field({ 
+        "name": "favoris", 
+        "type": "relation", 
+        "collectionId": "_pb_users_auth_",
+        "required": false 
+      }),
+      new Field({ 
+        "name": "ingredients",
+        "type": "json",
+        "required": false
+      }),
+      new Field({ 
+        "name": "statut", 
+        "type": "select", 
+        "values": ["draft", "approuve", "rejete"],
+        "required": true 
+      })
+    ]
+  });
+  app.save(recette);
+
+  // ========== Recréer composer_quantite (maintenant appelé simplement ingredients en JSON) ==========
+  // On laisse dans les instructions comment l'ajouter manuellement si besoin
+
+}, (app) => {
+  // Rollback - on ne recréé pas les vieilles collections
+});

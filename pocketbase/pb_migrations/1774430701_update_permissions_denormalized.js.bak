@@ -1,0 +1,59 @@
+/// <reference path="../pb_data/types.d.ts" />
+migrate((app) => {
+  // ========== USERS ==========
+  const users = app.findCollectionByNameOrId("users");
+  users.listRule = "id = @request.auth.id || @request.auth.role = 'admin'";
+  users.viewRule = "id = @request.auth.id || @request.auth.role = 'admin'";
+  users.createRule = ""; // Public signup
+  users.updateRule = "id = @request.auth.id || @request.auth.role = 'admin'";
+  users.deleteRule = "@request.auth.role = 'admin'";
+  app.save(users);
+
+  // ========== ALIMENT ==========
+  const aliment = app.findCollectionByNameOrId("aliment");
+  aliment.listRule = "true"; // Tous lisent
+  aliment.viewRule = "true"; // Tous lisent
+  aliment.createRule = "@request.auth.role = 'pro' || @request.auth.role = 'admin'";
+  aliment.updateRule = "@request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  aliment.deleteRule = "@request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  app.save(aliment);
+
+  // ========== RECETTE ==========
+  const recette = app.findCollectionByNameOrId("recette");
+  recette.listRule = "statut = 'approuve' || @request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  recette.viewRule = "statut = 'approuve' || @request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  recette.createRule = "@request.auth.role = 'pro' || @request.auth.role = 'admin'";
+  recette.updateRule = "@request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  recette.deleteRule = "@request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  app.save(recette);
+
+  // ========== CONSEIL ==========
+  const conseil = app.findCollectionByNameOrId("conseil");
+  conseil.listRule = "statut = 'publie' || @request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  conseil.viewRule = "statut = 'publie' || @request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  conseil.createRule = "@request.auth.role = 'pro' || @request.auth.role = 'admin'";
+  conseil.updateRule = "@request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  conseil.deleteRule = "@request.auth.id = auteur_id || @request.auth.role = 'admin'";
+  app.save(conseil);
+
+  // ========== SUIVI_UTILISATEUR (utilisateur seul) ==========
+  const suivi = app.findCollectionByNameOrId("suivi_utilisateur");
+  suivi.listRule = "@request.auth.id = utilisateur_id || @request.auth.role = 'admin'";
+  suivi.viewRule = "@request.auth.id = utilisateur_id || @request.auth.role = 'admin'";
+  suivi.createRule = "@request.auth.id = utilisateur_id || @request.auth.role = 'admin'";
+  suivi.updateRule = "@request.auth.id = utilisateur_id || @request.auth.role = 'admin'";
+  suivi.deleteRule = "@request.auth.id = utilisateur_id || @request.auth.role = 'admin'";
+  app.save(suivi);
+
+  // ========== PRODUIT_SPONSORISÉ ==========
+  const produit = app.findCollectionByNameOrId("produit_sponsorise");
+  produit.listRule = "true";
+  produit.viewRule = "true";
+  produit.createRule = "@request.auth.role = 'admin'";
+  produit.updateRule = "@request.auth.role = 'admin'";
+  produit.deleteRule = "@request.auth.role = 'admin'";
+  app.save(produit);
+
+}, (app) => {
+  // Rollback
+});
