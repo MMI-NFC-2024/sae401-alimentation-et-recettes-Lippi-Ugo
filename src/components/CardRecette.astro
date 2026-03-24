@@ -1,43 +1,48 @@
 ---
 import type { RecetteResponse } from "../pocketbase-types";
 import ImgPb from "./ImgPb.astro";
+import FavoriteButton from "./FavoriteButton.astro";
 
 interface Props {
     recette: RecetteResponse;
+    isFavorited?: boolean;
 }
 
-const { recette } = Astro.props;
+const { recette, isFavorited = false } = Astro.props;
 ---
 
-<a href={`/recettes/${recette.id}`} class="block">
-    <article
-        class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-    >
-        <ImgPb
-            record={recette}
-            field="image"
-            alt={recette.nom}
-            classPicture="h-44 w-full"
-            classImg="h-44 w-full object-cover"
-            thumb="800x400"
-        />
-        <div class="p-4">
-            <h3 class="mb-2 text-lg font-semibold text-(--color-text-dark)">
-                {recette.nom}
-            </h3>
-            <p class="text-sm text-(--color-text-muted)">
-                {
-                    (recette.temps_preparation ?? 0) +
-                        (recette.temps_cuisson ?? 0) >
-                    0
-                        ? `${(recette.temps_preparation ?? 0) + (recette.temps_cuisson ?? 0)} min`
-                        : "Temps non renseigne"
-                } • {
-                    recette.calories_par_part
-                        ? `${recette.calories_par_part} cal`
-                        : "Calories non renseignees"
-                }
-            </p>
-        </div>
-    </article>
-</a>
+<div class="relative">
+    <a href={`/recettes/${recette.id}`} class="block">
+        <article
+            class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+        >
+            <ImgPb
+                record={recette}
+                field="image"
+                alt={recette.nom}
+                classPicture="h-44 w-full"
+                classImg="h-44 w-full object-cover"
+                thumb="800x400"
+            />
+            <div class="p-4">
+                <h3 class="mb-2 text-lg font-semibold text-(--color-text-dark)">
+                    {recette.nom}
+                </h3>
+                <p class="text-sm text-(--color-text-muted)">
+                    {
+                        (recette.temps_preparation ?? 0) +
+                            (recette.temps_cuisson ?? 0) >
+                        0
+                            ? `${(recette.temps_preparation ?? 0) + (recette.temps_cuisson ?? 0)} min`
+                            : "Temps non renseigne"
+                    } • {
+                        recette.calories_par_part
+                            ? `${recette.calories_par_part} cal`
+                            : "Calories non renseignees"
+                    }
+                </p>
+            </div>
+        </article>
+    </a>
+    <FavoriteButton recetteId={recette.id} isFavorited={isFavorited} />
+</div>

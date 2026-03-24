@@ -1,5 +1,6 @@
 ---
 import CardRecette from "../../components/CardRecette.astro";
+import FavoriteButton from "../../components/FavoriteButton.astro";
 import ImgPb from "../../components/ImgPb.astro";
 import Layout from "../../layouts/Layout.astro";
 import type {
@@ -17,6 +18,7 @@ import type {
 export const prerender = false;
 
 const { id } = Astro.params as { id: string };
+const user = Astro.locals.pb.authStore.model;
 
 const recette = await Astro.locals.pb
     .collection("recette")
@@ -97,8 +99,25 @@ const regimesRecette =
 const sponsorsCote = liaisonsProduit
     .filter((item) => item.recette_id === recette.id)
     .map((item) => produitParId.get(item.produit_id))
-    .filter((item): item is ProduitSponsoriseResponse => Boolean(item))
-    .slice(0, 2);
+    .filter((item): item is ProduitSponsoriseResponse => Boolean(item));
+
+// Vérifier si la recette actuelle est favorite
+let isFavoritedCurrent = false;
+let favoriIds = new Set<string>();
+
+if (user) {
+    try {
+        const favoris = await Astro.locals.pb
+            .collection("favoris")
+            .getFullList({
+                filter: `utilisateur_id = "${user.id}"`,
+            });
+        isFavoritedCurrent = favoris.some((f) => f.recette_id === recette.id);
+        favoriIds = new Set(favoris.map((f) => f.recette_id));
+    } catch (e) {
+        isFavoritedCurrent = false;
+    }
+}
 
 const sponsorsCoteFinal =
     sponsorsCote.length > 0 ? sponsorsCote : produitsSponsorises.slice(0, 2);
@@ -326,29 +345,31 @@ const difficulteClasses =
                             {recette.nom}
                         </h1>
                         <div class="flex items-center gap-2">
-                            <button
-                                type="button"
-                                class="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                                aria-label="Ajouter aux favoris"
-                            >
-                                <svg
-                                    class="h-5 w-5"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                >
-                                    <path
-                                        d="M12 21s-7-4.35-7-11a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 6.65-7 11-7 11Z"
-                                    ></path>
-                                </svg>
-                            </button>
+                            <div class="relative">
+                                <FavoriteButton
+                                    recetteId={recette.id}
+                                    isFavorited={isFavoritedCurrent}
+                                />
+                            </div>
 
                             <span
                                 class={`rounded-full px-2 py-1 text-xs font-semibold ${difficulteClasses}`}
                             >
                                 {recette.difficulte || "Non renseignee"}
                             </span>
+
+                            {
+                                user &&
+                                    user.id === recette.auteur_id &&
+                                    user.role?.includes("pro") && (
+                                        <a
+                                            href={`/recettes/edit/${recette.id}`}
+                                            class="inline-flex items-center gap-2 rounded-lg bg-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-300"
+                                        >
+                                            ✏️ Éditer
+                                        </a>
+                                    )
+                            }
                         </div>
                     </div>
 
@@ -714,7 +735,10 @@ const difficulteClasses =
                     </h2>
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {recettesSimilaires.map((item) => (
-                            <CardRecette recette={item} />
+                            <CardRecette
+                                recette={item}
+                                isFavorited={favoriIds.has(item.id)}
+                            />
                         ))}
                     </div>
                 </section>

@@ -107,23 +107,38 @@ const tagsRegimes = [
         recettesAvecRelations.flatMap((item) => item.regimes).filter(Boolean),
     ),
 ].sort((a, b) => a.localeCompare(b));
+
+const user = Astro.locals.pb.authStore.model;
 ---
 
 <Layout titre="Recettes">
     <section class="container mx-auto px-6 py-10 lg:py-14">
         <div class="mb-10">
-            <h1 class="mb-2 text-4xl font-bold text-slate-900">
-                Recettes Saines
-            </h1>
-
-            <p class="mb-5 text-(--color-text-muted)">
-                Decouvrez des recettes equilibrees avec informations
-                nutritionnelles et calculateur de portions.
-            </p>
+            <div class="mb-4 flex items-center justify-between gap-4">
+                <div>
+                    <h1 class="mb-2 text-4xl font-bold text-slate-900">
+                        Recettes Saines
+                    </h1>
+                    <p class="text-(--color-text-muted)">
+                        Decouvrez des recettes equilibrees avec informations
+                        nutritionnelles et calculateur de portions.
+                    </p>
+                </div>
+                {
+                    user && user.role?.includes("pro") && (
+                        <a
+                            href="/recettes/creer"
+                            class="whitespace-nowrap rounded-lg bg-(--color-primary-dark) px-4 py-2 font-semibold text-white transition hover:bg-(--color-primary-hover)"
+                        >
+                            + Créer recette
+                        </a>
+                    )
+                }
+            </div>
 
             <form
                 id="filtres-recettes"
-                class="rounded-2xl border border-slate-200 bg-white p-4"
+                class="mb-6 rounded-2xl border border-slate-200 bg-white p-4"
             >
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                     <input
@@ -226,30 +241,6 @@ const tagsRegimes = [
                         ))}
                     </div>
                 </section>
-            )
-        }
-
-        {
-            Astro.locals.pb.authStore.isValid && (
-                <a
-                    href="/recettes"
-                    class="mt-8 inline-flex items-center gap-2 rounded-lg bg-(--color-primary-dark) px-6 py-3 font-semibold text-white shadow-lg transition-all hover:bg-(--color-primary-hover) hover:shadow-xl"
-                >
-                    <svg
-                        class="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 4v16m8-8H4"
-                        />
-                    </svg>
-                    Ajouter une nouvelle recette
-                </a>
             )
         }
     </section>
