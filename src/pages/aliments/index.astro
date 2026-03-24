@@ -1,0 +1,338 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import CardAliment from "../../components/CardAliment.astro";
+import ImgPb from "../../components/ImgPb.astro";
+import type { AlimentResponse, ProduitSponsoriseResponse } from "../../pocketbase-types";
+
+const [aliments, produitsSponsorises] = await Promise.all([
+	Astro.locals.pb
+		.collection("aliment")
+		.getFullList<AlimentResponse>({ sort: "nom" }),
+	Astro.locals.pb
+		.collection("produit_sponsorise")
+		.getFullList<ProduitSponsoriseResponse>(),
+]);
+
+const alimentsParPage = 9;
+---
+
+<Layout titre="Aliments">
+	<section class="w-full py-12 bg-(--color-bg-light)">
+		<div class="container mx-auto px-6">
+			{/* HEADER */}
+			<div class="mb-12">
+				<h1 class="mb-2 text-4xl font-bold text-slate-900">
+					Base d'Aliments
+				</h1>
+				<p class="text-(--color-text-muted) text-lg">
+					Explorez notre base de données d'aliments avec informations nutritionnelles complètes.
+				</p>
+			</div>
+
+			{/* SEARCH & FILTERS */}
+			<div class="mb-8 bg-white rounded-xl border border-slate-200 p-6">
+				<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+					<div>
+						<input
+							type="text"
+							id="search-input"
+							placeholder="Rechercher un aliment..."
+							class="w-full px-4 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-(--color-primary)"
+						/>
+					</div>
+					<div>
+						<select
+							id="filter-type"
+							class="w-full px-4 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-(--color-primary)"
+						>
+							<option value="">Tous les types</option>
+							<option value="proteines">Riche en protéines</option>
+							<option value="glucides">Riche en glucides</option>
+							<option value="lipides">Riche en lipides</option>
+							<option value="fibres">Riche en fibres</option>
+						</select>
+					</div>
+					<div>
+						<select
+							id="filter-calories"
+							class="w-full px-4 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-(--color-primary)"
+						>
+							<option value="">Toutes les calories</option>
+							<option value="low">Faible (0-100 kcal)</option>
+							<option value="medium">Moyen (100-250 kcal)</option>
+							<option value="high">Élevé (250+ kcal)</option>
+						</select>
+					</div>
+				</div>
+			</div>
+
+			{/* COUNT */}
+			<div class="mb-6">
+				<p class="text-sm text-slate-600">
+					<span id="aliment-count">{aliments.length}</span> aliments trouvés
+				</p>
+			</div>
+
+			{/* GRID */}
+			<div 
+				id="aliments-container"
+				class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-8"
+			>
+				{
+					aliments.map((aliment) => (
+						<div 
+							class="aliment-wrapper"
+							data-aliment-id={aliment.id}
+							data-aliment-nom={aliment.nom}
+							data-aliment-proteines={aliment.proteines || 0}
+							data-aliment-glucides={aliment.glucides || 0}
+							data-aliment-lipides={aliment.lipides || 0}
+							data-aliment-fibres={aliment.fibres || 0}
+							data-aliment-calories={aliment.calories_100g || 0}
+						>
+							<CardAliment aliment={aliment} />
+						</div>
+					))
+				}
+			</div>
+
+			{/* PAGINATION */}
+			{aliments.length > alimentsParPage && (
+				<div class="flex items-center justify-center gap-2 mb-12">
+					<button
+						id="btn-prev"
+						class="px-3 py-2 rounded-lg border border-slate-300 text-sm font-medium hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						← Précédent
+					</button>
+
+					<div id="pagination-numbers" class="flex gap-1">
+						<!-- Pagination buttons will be generated here -->
+					</div>
+
+					<button
+						id="btn-next"
+						class="px-3 py-2 rounded-lg border border-slate-300 text-sm font-medium hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						Suivant →
+					</button>
+				</div>
+			)}
+
+			{aliments.length === 0 && (
+				<div class="text-center py-12">
+					<p class="text-(--color-text-muted)">
+						Aucun aliment trouvé.
+					</p>
+				</div>
+			)}
+
+			{/* SPONSORED PRODUCTS */}
+			{produitsSponsorises.length > 0 && (
+				<section class="mt-16">
+					<h2 class="mb-8 text-3xl font-bold text-slate-900">
+						Produits recommandés
+					</h2>
+
+					<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+						{produitsSponsorises.slice(0, 3).map((produit) => (
+							<article class="relative overflow-hidden rounded-xl border-2 border-amber-300 bg-amber-50 p-4">
+								<span class="absolute right-2 top-2 rounded-full bg-amber-500 px-2 py-1 text-xs font-semibold text-white">
+									Sponsorisé
+								</span>
+
+								<ImgPb
+									record={produit}
+									field="image"
+									alt={produit.nom}
+									classPicture="mb-3 h-48 w-full overflow-hidden rounded-lg bg-slate-200"
+									classImg="h-48 w-full object-cover"
+									thumb="600x400"
+								/>
+
+								<h3 class="mb-2 font-semibold text-slate-900">
+									{produit.nom}
+								</h3>
+								<p class="mb-3 line-clamp-2 text-xs text-slate-600">
+									{produit.description || "Produit recommandé."}
+								</p>
+								<div class="flex items-center justify-between gap-2">
+									<p class="text-lg font-bold text-(--color-primary)">
+										{produit.prix || "Prix n/r"}€
+									</p>
+									{produit.lien_affiliation ? (
+										<a
+											href={produit.lien_affiliation}
+											target="_blank"
+											rel="noopener noreferrer"
+											class="text-xs font-semibold text-amber-700 hover:underline"
+										>
+											En savoir plus ↗
+										</a>
+									) : (
+										<span class="text-xs text-slate-500">
+											Lien indisponible
+										</span>
+									)}
+								</div>
+							</article>
+						))}
+					</div>
+				</section>
+			)}
+		</div>
+	</section>
+
+	<script define:vars={{ totalAliments: aliments.length, alimentsParPage }}>
+		const container = document.getElementById("aliments-container");
+		const searchInput = document.getElementById("search-input");
+		const filterType = document.getElementById("filter-type");
+		const filterCalories = document.getElementById("filter-calories");
+		const alimentCount = document.getElementById("aliment-count");
+		const prevBtn = document.getElementById("btn-prev");
+		const nextBtn = document.getElementById("btn-next");
+		const paginationNumbers = document.getElementById("pagination-numbers");
+
+		let currentPage = 1;
+		let filteredAliments = [];
+
+		// Récupérer les aliments depuis la page
+		const getAllAliments = () => {
+			const wrappers = document.querySelectorAll(".aliment-wrapper");
+			return Array.from(wrappers).map((wrapper) => ({
+				id: wrapper.dataset.alimentId,
+				nom: wrapper.dataset.alimentNom || "",
+				proteines: parseFloat(wrapper.dataset.alimentProteines || 0),
+				glucides: parseFloat(wrapper.dataset.alimentGlucides || 0),
+				lipides: parseFloat(wrapper.dataset.alimentLipides || 0),
+				fibres: parseFloat(wrapper.dataset.alimentFibres || 0),
+				calories_100g: parseFloat(wrapper.dataset.alimentCalories || 0),
+				element: wrapper,
+			}));
+		};
+
+		const applyFilters = () => {
+			const searchTerm = searchInput.value.toLowerCase();
+			const typeFilter = filterType.value;
+			const calorieFilter = filterCalories.value;
+
+			const allAliments = getAllAliments();
+
+			filteredAliments = allAliments.filter((aliment) => {
+				// Search filter
+				if (
+					searchTerm &&
+					!aliment.nom.toLowerCase().includes(searchTerm)
+				) {
+					return false;
+				}
+
+				// Type filter
+				if (typeFilter) {
+					const macroValue = aliment[typeFilter] || 0;
+					if (macroValue === 0) return false;
+				}
+
+				// Calorie filter
+				if (calorieFilter) {
+					const cal = aliment.calories_100g;
+					if (
+						calorieFilter === "low" &&
+						!(cal >= 0 && cal <= 100)
+					)
+						return false;
+					if (
+						calorieFilter === "medium" &&
+						!(cal > 100 && cal <= 250)
+					)
+						return false;
+					if (calorieFilter === "high" && !(cal > 250)) return false;
+				}
+
+				return true;
+			});
+
+			currentPage = 1;
+			renderPagination();
+			displayAliments();
+		};
+
+		const displayAliments = () => {
+			const allAliments = getAllAliments();
+			allAliments.forEach((aliment) => (aliment.element.style.display = "none"));
+
+			const startIdx = (currentPage - 1) * alimentsParPage;
+			const endIdx = startIdx + alimentsParPage;
+
+			filteredAliments.slice(startIdx, endIdx).forEach((aliment) => {
+				const el = allAliments.find((a) => a.id === aliment.id);
+				if (el) el.element.style.display = "";
+			});
+
+			alimentCount.textContent = filteredAliments.length;
+			updatePaginationButtons();
+		};
+
+		const renderPagination = () => {
+			paginationNumbers.innerHTML = "";
+			const pageCount = Math.ceil(
+				filteredAliments.length / alimentsParPage,
+			);
+
+			for (let i = 1; i <= pageCount; i++) {
+				const btn = document.createElement("button");
+				btn.textContent = i;
+				btn.className = `px-2 py-1 rounded text-sm ${
+					i === currentPage
+						? "bg-emerald-600 text-white"
+						: "border border-slate-300 hover:bg-slate-100"
+				}`;
+				btn.onclick = () => {
+					currentPage = i;
+					displayAliments();
+					renderPagination();
+				};
+				paginationNumbers.appendChild(btn);
+			}
+		};
+
+		const updatePaginationButtons = () => {
+			const pageCount = Math.ceil(
+				filteredAliments.length / alimentsParPage,
+			);
+			if (prevBtn)
+				prevBtn.disabled = currentPage === 1;
+			if (nextBtn)
+				nextBtn.disabled = currentPage === pageCount;
+		};
+
+		searchInput?.addEventListener("input", applyFilters);
+		filterType?.addEventListener("change", applyFilters);
+		filterCalories?.addEventListener("change", applyFilters);
+
+		prevBtn?.addEventListener("click", () => {
+			if (currentPage > 1) {
+				currentPage--;
+				displayAliments();
+				renderPagination();
+			}
+		});
+
+		nextBtn?.addEventListener("click", () => {
+			const pageCount = Math.ceil(
+				filteredAliments.length / alimentsParPage,
+			);
+			if (currentPage < pageCount) {
+				currentPage++;
+				displayAliments();
+				renderPagination();
+			}
+		});
+
+		// Initialize
+		filteredAliments = getAllAliments();
+		displayAliments();
+		renderPagination();
+		updatePaginationButtons();
+	</script>
+</Layout>

@@ -1,0 +1,258 @@
+---
+import CardRecette from "../../components/CardRecette.astro";
+import ImgPb from "../../components/ImgPb.astro";
+import Layout from "../../layouts/Layout.astro";
+import type {
+    AlimentResponse,
+    ComposerQuantiteResponse,
+    RecetteResponse,
+    ProduitSponsoriseResponse,
+} from "../../pocketbase-types";
+
+export const prerender = false;
+
+const { id } = Astro.params as { id: string };
+
+const [aliment, liaisonsIngredients, recettes, produitsSponsorises] =
+    await Promise.all([
+        Astro.locals.pb.collection("aliment").getOne<AlimentResponse>(id),
+        Astro.locals.pb
+            .collection("composer_quantite")
+            .getFullList<ComposerQuantiteResponse>({
+                filter: `aliment_id = "${id}"`,
+            }),
+        Astro.locals.pb.collection("recette").getFullList<RecetteResponse>(),
+        Astro.locals.pb
+            .collection("produit_sponsorise")
+            .getFullList<ProduitSponsoriseResponse>(),
+    ]);
+
+// Recettes qui utilisent cet aliment
+const recettesUtilisant = liaisonsIngredients
+    .map((lien) => recettes.find((r) => r.id === lien.recette_id))
+    .filter((r): r is RecetteResponse => Boolean(r));
+
+const user = Astro.locals.pb.authStore.model;
+let isFavorite = false;
+
+if (user) {
+    try {
+        const favoris = await Astro.locals.pb
+            .collection("favoris")
+            .getFullList({
+                filter: `utilisateur_id = "${user.id}" && aliment_id = "${id}"`,
+            });
+        isFavorite = favoris.length > 0;
+    } catch (e) {
+        isFavorite = false;
+    }
+}
+---
+
+<Layout titre={aliment.nom}>
+    <section class="w-full py-12 bg-slate-50">
+        <div class="container mx-auto px-6">
+            <a
+                href="/aliments"
+                class="mb-6 inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 text-sm font-semibold"
+            >
+                ← Retour aux aliments
+            </a>
+
+            <div class="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
+                {/* LEFT COLUMN */}
+                <article class="space-y-8">
+                    {/* IMAGE & TITLE */}
+                    <div
+                        class="bg-white rounded-2xl border border-slate-200 overflow-hidden"
+                    >
+                        <ImgPb
+                            record={aliment}
+                            field="image"
+                            alt={aliment.nom}
+                            classPicture="w-full h-80"
+                            classImg="w-full h-80 object-cover"
+                            thumb="800x600"
+                        />
+                        <div class="p-6">
+                            <div class="flex items-center gap-3 mb-2">
+                                <h1 class="text-3xl font-bold text-slate-900">
+                                    {aliment.nom}
+                                </h1>
+                                <span
+                                    class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700"
+                                >
+                                    Fruits
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* VALEURS NUTRITIONNELLES */}
+                    <div
+                        class="bg-white rounded-2xl border border-slate-200 p-6"
+                    >
+                        <h2 class="mb-6 font-bold text-slate-900">
+                            Valeurs nutritionnelles (pour 100g)
+                        </h2>
+
+                        <div class="grid grid-cols-5 gap-4 mb-8">
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-emerald-600">
+                                    {aliment.calories_100g || 0}
+                                </p>
+                                <p class="text-xs text-slate-600">kcal</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-blue-600">
+                                    {aliment.proteines || 0}
+                                </p>
+                                <p class="text-xs text-slate-600">Protéines</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-orange-600">
+                                    {aliment.glucides || 0}
+                                </p>
+                                <p class="text-xs text-slate-600">Glucides</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-red-600">
+                                    {aliment.lipides || 0}
+                                </p>
+                                <p class="text-xs text-slate-600">Lipides</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-2xl font-bold text-violet-600">
+                                    {aliment.fibres || 0}
+                                </p>
+                                <p class="text-xs text-slate-600">Fibres</p>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                {/* RIGHT SIDEBAR - SPONSORS */}
+                <aside class="space-y-4">
+                    {
+                        produitsSponsorises.slice(0, 2).map((produit) => (
+                            <article class="relative overflow-hidden rounded-xl border-2 border-amber-300 bg-amber-50 p-3">
+                                <span class="absolute right-1.5 top-1.5 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+                                    Sponsorisé
+                                </span>
+
+                                <ImgPb
+                                    record={produit}
+                                    field="image"
+                                    alt={produit.nom}
+                                    classPicture="mb-2 h-32 w-full overflow-hidden rounded-lg bg-slate-200"
+                                    classImg="h-32 w-full object-cover"
+                                    thumb="400x300"
+                                />
+
+                                <h3 class="mb-1 text-sm font-semibold text-slate-900">
+                                    {produit.nom}
+                                </h3>
+                                <p class="mb-2 line-clamp-2 text-xs text-slate-600">
+                                    {produit.description ||
+                                        "Produit recommandé."}
+                                </p>
+                                <div class="flex items-center justify-between gap-2">
+                                    <p class="text-sm font-bold text-amber-600">
+                                        {produit.prix}€
+                                    </p>
+                                    {produit.lien_affiliation ? (
+                                        <a
+                                            href={produit.lien_affiliation}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="text-xs font-semibold text-amber-700 hover:underline"
+                                        >
+                                            En savoir plus ↗
+                                        </a>
+                                    ) : null}
+                                </div>
+                            </article>
+                        ))
+                    }
+                </aside>
+            </div>
+
+            {/* RECETTES - FULL WIDTH */}
+            {
+                recettesUtilisant.length > 0 && (
+                    <section class="mt-12 pt-8 border-t border-slate-200">
+                        <h2 class="mb-6 text-2xl font-bold text-slate-900">
+                            Recettes contenant cet aliment
+                        </h2>
+
+                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                            {recettesUtilisant.map((recette) => (
+                                <CardRecette recette={recette} />
+                            ))}
+                        </div>
+                    </section>
+                )
+            }
+        </div>
+    </section>
+
+    <script define:vars={{ alimentId: id, isFavorite }}>
+        const btnFavorite = document.getElementById("btn-favorite");
+        if (btnFavorite) {
+            btnFavorite.addEventListener("click", async () => {
+                try {
+                    const currentFavorite =
+                        btnFavorite.dataset.isFavorite === "true";
+
+                    if (currentFavorite) {
+                        const favoris = await fetch(
+                            `/api/favoris?filter=aliment_id="${alimentId}"`,
+                        )
+                            .then((r) => r.json())
+                            .catch(() => ({ items: [] }));
+
+                        if (favoris.items && favoris.items.length > 0) {
+                            await fetch(`/api/favoris/${favoris.items[0].id}`, {
+                                method: "DELETE",
+                            });
+                        }
+
+                        btnFavorite.dataset.isFavorite = "false";
+                        btnFavorite.textContent = "☆ Ajouter aux favoris";
+                        btnFavorite.classList.remove(
+                            "bg-emerald-600",
+                            "text-white",
+                        );
+                        btnFavorite.classList.add(
+                            "border-2",
+                            "border-emerald-600",
+                            "text-emerald-600",
+                        );
+                    } else {
+                        await fetch("/api/favoris", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                aliment_id: alimentId,
+                            }),
+                        });
+
+                        btnFavorite.dataset.isFavorite = "true";
+                        btnFavorite.textContent = "★ Favori";
+                        btnFavorite.classList.remove(
+                            "border-2",
+                            "border-emerald-600",
+                            "text-emerald-600",
+                        );
+                        btnFavorite.classList.add(
+                            "bg-emerald-600",
+                            "text-white",
+                        );
+                    }
+                } catch (error) {
+                    console.error("Erreur:", error);
+                }
+            });
+        }
+    </script>
+</Layout>
