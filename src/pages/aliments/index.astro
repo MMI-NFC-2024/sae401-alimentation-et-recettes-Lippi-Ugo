@@ -4,6 +4,8 @@ import CardAliment from "../../components/CardAliment.astro";
 import ImgPb from "../../components/ImgPb.astro";
 import type { AlimentResponse, ProduitSponsoriseResponse } from "../../pocketbase-types";
 
+const user = Astro.locals.pb.authStore.model;
+
 const [aliments, produitsSponsorises] = await Promise.all([
 	Astro.locals.pb
 		.collection("aliment")
@@ -20,13 +22,23 @@ const alimentsParPage = 9;
 	<section class="w-full py-12 bg-(--color-bg-light)">
 		<div class="container mx-auto px-6">
 			{/* HEADER */}
-			<div class="mb-12">
-				<h1 class="mb-2 text-4xl font-bold text-slate-900">
-					Base d'Aliments
-				</h1>
-				<p class="text-(--color-text-muted) text-lg">
-					Explorez notre base de données d'aliments avec informations nutritionnelles complètes.
-				</p>
+			<div class="mb-12 flex items-center justify-between gap-6">
+				<div>
+					<h1 class="mb-2 text-4xl font-bold text-slate-900">
+						Base d'Aliments
+					</h1>
+					<p class="text-(--color-text-muted) text-lg">
+						Explorez notre base de données d'aliments avec informations nutritionnelles complètes.
+					</p>
+				</div>
+				{user && user.role?.includes("pro") && (
+					<a
+						href="/aliments/creer"
+						class="whitespace-nowrap rounded-lg bg-(--color-primary-dark) px-4 py-2 font-semibold text-white transition hover:bg-(--color-primary-hover)"
+					>
+						+ Créer aliment
+					</a>
+				)}
 			</div>
 
 			{/* SEARCH & FILTERS */}

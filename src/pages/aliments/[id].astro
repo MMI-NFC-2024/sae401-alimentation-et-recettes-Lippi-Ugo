@@ -12,6 +12,7 @@ import type {
 export const prerender = false;
 
 const { id } = Astro.params as { id: string };
+const user = Astro.locals.pb.authStore.model;
 
 const [aliment, liaisonsIngredients, recettes, produitsSponsorises] =
     await Promise.all([
@@ -31,22 +32,6 @@ const [aliment, liaisonsIngredients, recettes, produitsSponsorises] =
 const recettesUtilisant = liaisonsIngredients
     .map((lien) => recettes.find((r) => r.id === lien.recette_id))
     .filter((r): r is RecetteResponse => Boolean(r));
-
-const user = Astro.locals.pb.authStore.model;
-let isFavorite = false;
-
-if (user) {
-    try {
-        const favoris = await Astro.locals.pb
-            .collection("favoris")
-            .getFullList({
-                filter: `utilisateur_id = "${user.id}" && aliment_id = "${id}"`,
-            });
-        isFavorite = favoris.length > 0;
-    } catch (e) {
-        isFavorite = false;
-    }
-}
 ---
 
 <Layout titre={aliment.nom}>
@@ -84,6 +69,18 @@ if (user) {
                                 >
                                     Fruits
                                 </span>
+                                {
+                                    user &&
+                                        user.id === aliment.auteur_id &&
+                                        user.role?.includes("pro") && (
+                                            <a
+                                                href={`/aliments/edit/${aliment.id}`}
+                                                class="inline-flex items-center gap-2 rounded-lg bg-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-300"
+                                            >
+                                                ✏️ Éditer
+                                            </a>
+                                        )
+                                }
                             </div>
                         </div>
                     </div>
@@ -187,7 +184,10 @@ if (user) {
 
                         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                             {recettesUtilisant.map((recette) => (
-                                <CardRecette recette={recette} />
+                                <CardRecette
+                                    recette={recette}
+                                    isFavorited={false}
+                                />
                             ))}
                         </div>
                     </section>
@@ -195,64 +195,4 @@ if (user) {
             }
         </div>
     </section>
-
-    <script define:vars={{ alimentId: id, isFavorite }}>
-        const btnFavorite = document.getElementById("btn-favorite");
-        if (btnFavorite) {
-            btnFavorite.addEventListener("click", async () => {
-                try {
-                    const currentFavorite =
-                        btnFavorite.dataset.isFavorite === "true";
-
-                    if (currentFavorite) {
-                        const favoris = await fetch(
-                            `/api/favoris?filter=aliment_id="${alimentId}"`,
-                        )
-                            .then((r) => r.json())
-                            .catch(() => ({ items: [] }));
-
-                        if (favoris.items && favoris.items.length > 0) {
-                            await fetch(`/api/favoris/${favoris.items[0].id}`, {
-                                method: "DELETE",
-                            });
-                        }
-
-                        btnFavorite.dataset.isFavorite = "false";
-                        btnFavorite.textContent = "☆ Ajouter aux favoris";
-                        btnFavorite.classList.remove(
-                            "bg-emerald-600",
-                            "text-white",
-                        );
-                        btnFavorite.classList.add(
-                            "border-2",
-                            "border-emerald-600",
-                            "text-emerald-600",
-                        );
-                    } else {
-                        await fetch("/api/favoris", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                aliment_id: alimentId,
-                            }),
-                        });
-
-                        btnFavorite.dataset.isFavorite = "true";
-                        btnFavorite.textContent = "★ Favori";
-                        btnFavorite.classList.remove(
-                            "border-2",
-                            "border-emerald-600",
-                            "text-emerald-600",
-                        );
-                        btnFavorite.classList.add(
-                            "bg-emerald-600",
-                            "text-white",
-                        );
-                    }
-                } catch (error) {
-                    console.error("Erreur:", error);
-                }
-            });
-        }
-    </script>
 </Layout>
