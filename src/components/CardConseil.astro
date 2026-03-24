@@ -1,0 +1,62 @@
+---
+import type { ConseilResponse } from "../pocketbase-types";
+import ImgPb from "./ImgPb.astro";
+
+interface Props {
+    conseil: ConseilResponse;
+}
+
+const { conseil } = Astro.props;
+---
+
+<a href={`/conseils/${conseil.id}`} class="block">
+    <article
+        class="overflow-hidden rounded-lg border border-slate-200 bg-white transition hover:shadow-lg"
+    >
+        <ImgPb
+            record={conseil}
+            field="image"
+            alt={conseil.titre}
+            classPicture="h-48 w-full"
+            classImg="h-48 w-full object-cover"
+            thumb="600x400"
+        />
+
+        <div class="p-4">
+            <h3 class="mb-2 text-lg font-semibold text-slate-900">
+                {conseil.titre}
+            </h3>
+
+            <p class="mb-4 line-clamp-2 text-sm text-slate-600">
+                {
+                    conseil.contenu
+                        ? conseil.contenu
+                              .replace(/<[^>]*>/g, "")
+                              .substring(0, 100)
+                              .concat("...")
+                        : "Conseil"
+                }
+            </p>
+
+            <div class="mb-4 flex items-center gap-4 text-xs text-slate-500">
+                {
+                    conseil.date_publication && (
+                        <span>
+                            📅{" "}
+                            {new Date(
+                                conseil.date_publication,
+                            ).toLocaleDateString("fr-FR")}
+                        </span>
+                    )
+                }
+                <span>❤ 0</span>
+            </div>
+
+            <button
+                class="inline-block w-full rounded-lg bg-emerald-600 px-4 py-2 text-center text-sm font-semibold text-white transition hover:bg-emerald-700"
+            >
+                Lire l'article
+            </button>
+        </div>
+    </article>
+</a>

@@ -1,0 +1,156 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import ImgPb from "../../components/ImgPb.astro";
+import CardConseil from "../../components/CardConseil.astro";
+import type {
+    ConseilResponse,
+    ProduitSponsoriseResponse,
+} from "../../pocketbase-types";
+
+const [conseils, produitsSponsorises] = await Promise.all([
+    Astro.locals.pb.collection("conseil").getFullList<ConseilResponse>({
+        sort: "-date_publication",
+        filter: 'statut = "publie"',
+    }),
+    Astro.locals.pb
+        .collection("produit_sponsorise")
+        .getFullList<ProduitSponsoriseResponse>(),
+]);
+---
+
+<Layout titre="Conseils & Articles">
+    <section class="w-full py-12 bg-slate-50">
+        <div class="container mx-auto px-6">
+            <div class="mb-12">
+                <h1 class="mb-2 text-4xl font-bold text-slate-900">
+                    Conseils & Articles
+                </h1>
+                <p class="text-slate-600">
+                    Découvrez nos articles rédigés par des professionnels de la
+                    nutrition et du sport
+                </p>
+            </div>
+
+            <div class="mb-8">
+                <input
+                    type="text"
+                    id="search-input"
+                    placeholder="Rechercher un article..."
+                    class="w-full px-4 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                />
+            </div>
+
+            {/* FEATURED SPONSOR */}
+            {
+                produitsSponsorises.length > 0 && (
+                    <div class="mb-12 rounded-xl border-2 border-amber-300 bg-amber-50 p-6 sm:p-8 relative">
+                        <span class="absolute right-4 top-4 rounded-full bg-amber-500 px-2 py-1 text-xs font-semibold text-white">
+                            Sponsorisé
+                        </span>
+
+                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-3 pt-6">
+                            <div class="sm:col-span-2">
+                                <h3 class="mb-2 text-xl font-bold text-slate-900">
+                                    {produitsSponsorises[0].nom}
+                                </h3>
+                                <p class="mb-4 text-sm text-slate-700">
+                                    {produitsSponsorises[0].description}
+                                </p>
+                                <div class="flex items-center justify-between">
+                                    <p class="text-lg font-bold text-amber-600">
+                                        {produitsSponsorises[0].prix}/mois
+                                    </p>
+                                    {produitsSponsorises[0].lien_affiliation ? (
+                                        <a
+                                            href={
+                                                produitsSponsorises[0]
+                                                    .lien_affiliation
+                                            }
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="text-sm font-semibold text-amber-700 hover:underline"
+                                        >
+                                            En savoir plus ↗
+                                        </a>
+                                    ) : null}
+                                </div>
+                            </div>
+                            <div>
+                                <ImgPb
+                                    record={produitsSponsorises[0]}
+                                    field="image"
+                                    alt={produitsSponsorises[0].nom}
+                                    classPicture="h-40 w-full rounded-lg bg-slate-200"
+                                    classImg="h-40 w-full object-cover rounded-lg"
+                                    thumb="400x300"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            <div class="mb-6">
+                <p class="text-sm text-slate-600">
+                    <span id="articles-count">{conseils.length}</span> articles trouvés
+                </p>
+            </div>
+
+            <div
+                id="articles-container"
+                class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+            >
+                {
+                    conseils.map((conseil) => (
+                        <div
+                            class="conseil-wrapper"
+                            data-conseil-id={conseil.id}
+                            data-conseil-titre={conseil.titre}
+                        >
+                            <CardConseil conseil={conseil} />
+                        </div>
+                    ))
+                }
+            </div>
+
+            {
+                conseils.length === 0 && (
+                    <div class="py-12 text-center">
+                        <p class="text-slate-600">Aucun article trouvé.</p>
+                    </div>
+                )
+            }
+        </div>
+    </section>
+
+    <script>
+        const searchInput = document.getElementById(
+            "search-input",
+        ) as HTMLInputElement | null;
+        const articlesCount = document.getElementById("articles-count");
+
+        const applyFilters = () => {
+            if (!searchInput) return;
+
+            const searchTerm = searchInput.value.toLowerCase();
+            const wrappers = document.querySelectorAll(".conseil-wrapper");
+            let visibleCount = 0;
+
+            wrappers.forEach((wrapper) => {
+                const htmlWrapper = wrapper as HTMLElement;
+                const titre =
+                    htmlWrapper.dataset.conseilTitre?.toLowerCase() || "";
+                const shouldShow = titre.includes(searchTerm);
+                htmlWrapper.style.display = shouldShow ? "" : "none";
+
+                if (shouldShow) visibleCount++;
+            });
+
+            if (articlesCount) {
+                articlesCount.textContent = String(visibleCount);
+            }
+        };
+
+        searchInput?.addEventListener("input", applyFilters);
+    </script>
+</Layout>
