@@ -10,10 +10,10 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "typegen": "npx pocketbase-typegen --db ./pocketbase/pb_data/data.db --out src/pocketbase-types.ts" 
-
+    "typegen": "npx pocketbase-typegen --db ./pocketbase/pb_data/data.db --out src/pocketbase-types.ts"
   },
   "dependencies": {
+    "@astrojs/netlify": "^7.0.4",
     "@astrojs/node": "^10.0.2",
     "@tailwindcss/vite": "^4.2.1",
     "astro": "^6.0.5",
