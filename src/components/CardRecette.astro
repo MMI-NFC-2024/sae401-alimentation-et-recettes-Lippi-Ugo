@@ -7,10 +7,6 @@ interface Props {
 }
 
 const { recette } = Astro.props;
-
-const tempsTotal =
-    (recette.temps_preparation ?? 0) + (recette.temps_cuisson ?? 0);
-const infosRecette = `${tempsTotal > 0 ? `${tempsTotal} min` : "Temps non renseigne"} • ${recette.calories_par_part ? `${recette.calories_par_part} kcal` : "Calories non renseignees"}`;
 ---
 
 <a href={`/recettes/${recette.id}`} class="block">
@@ -29,7 +25,19 @@ const infosRecette = `${tempsTotal > 0 ? `${tempsTotal} min` : "Temps non rensei
             <h3 class="mb-2 text-lg font-semibold text-(--color-text-dark)">
                 {recette.nom}
             </h3>
-            <p class="text-sm text-(--color-text-muted)">{infosRecette}</p>
+            <p class="text-sm text-(--color-text-muted)">
+                {
+                    (recette.temps_preparation ?? 0) +
+                        (recette.temps_cuisson ?? 0) >
+                    0
+                        ? `${(recette.temps_preparation ?? 0) + (recette.temps_cuisson ?? 0)} min`
+                        : "Temps non renseigne"
+                } • {
+                    recette.calories_par_part
+                        ? `${recette.calories_par_part} cal`
+                        : "Calories non renseignees"
+                }
+            </p>
         </div>
     </article>
 </a>

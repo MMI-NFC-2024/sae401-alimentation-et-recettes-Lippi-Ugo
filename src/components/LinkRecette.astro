@@ -1,0 +1,85 @@
+---
+import ImgPb from "./ImgPb.astro";
+import type { RecetteResponse } from "../pocketbase-types";
+
+interface Props {
+    recette: RecetteResponse;
+}
+
+const { recette } = Astro.props;
+---
+
+<a href={`/recettes/${recette.id}`} class="group block">
+    <article
+        class="overflow-hidden rounded-3xl border border-slate-300 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+    >
+        <div class="relative">
+            <ImgPb
+                record={recette}
+                field="image"
+                alt={recette.nom}
+                classPicture="h-56 w-full bg-slate-200"
+                classImg="h-56 w-full object-cover"
+                thumb="900x520"
+            />
+
+            <span
+                class={`absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-semibold shadow-sm ${
+                    recette.difficulte === "Facile"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : recette.difficulte === "Moyen"
+                          ? "bg-amber-100 text-amber-700"
+                          : recette.difficulte === "Difficile"
+                            ? "bg-rose-100 text-rose-700"
+                            : "bg-slate-200 text-slate-700"
+                }`}
+            >
+                {recette.difficulte || "Non renseignée"}
+            </span>
+        </div>
+
+        <div class="bg-slate-50 p-5">
+            <div class="mb-3">
+                <h3 class="text-2xl font-semibold leading-tight text-slate-900">
+                    {recette.nom}
+                </h3>
+            </div>
+
+            <p class="mb-5 line-clamp-2 text-lg leading-snug text-slate-600">
+                {
+                    recette.description ||
+                        "Une recette saine et equilibree, parfaite pour votre quotidien."
+                }
+            </p>
+
+            <div class="flex items-center gap-6 text-lg text-slate-600">
+                <span class="inline-flex items-center gap-2">
+                    <svg
+                        class="h-5 w-5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                    >
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <path d="M12 7v6l4 2"></path>
+                    </svg>
+                    {
+                        (recette.temps_preparation ?? 0) +
+                            (recette.temps_cuisson ?? 0) >
+                        0
+                            ? `${(recette.temps_preparation ?? 0) + (recette.temps_cuisson ?? 0)} min`
+                            : "Temps non renseigne"
+                    }
+                </span>
+                <span>
+                    {
+                        recette.calories_par_part
+                            ? `${recette.calories_par_part} cal`
+                            : "Calories non renseignees"
+                    }
+                </span>
+            </div>
+        </div>
+    </article>
+</a>

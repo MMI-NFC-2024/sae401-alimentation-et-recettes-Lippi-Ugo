@@ -1,0 +1,50 @@
+---
+import LinkRecette from "../../components/LinkRecette.astro";
+import Layout from "../../layouts/Layout.astro";
+import type { RecetteResponse } from "../../pocketbase-types";
+
+const recettes = await Astro.locals.pb
+    .collection("recette")
+    .getFullList<RecetteResponse>();
+---
+
+<Layout titre="Recettes">
+    <section class="container mx-auto px-6 py-10 lg:py-14">
+        <div class="mb-10">
+            <h1 class="mb-2 text-4xl font-bold text-slate-900">
+                Recettes Saines
+            </h1>
+            <p class="text-slate-600">
+                {recettes.length} recettes
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {recettes.map((recette) => <LinkRecette recette={recette} />)}
+        </div>
+
+        {
+            Astro.locals.pb.authStore.isValid && (
+                <a
+                    href="/recettes"
+                    class="mt-8 inline-flex items-center gap-2 rounded-lg bg-(--color-primary-dark) px-6 py-3 font-semibold text-white shadow-lg transition-all hover:bg-(--color-primary-hover) hover:shadow-xl"
+                >
+                    <svg
+                        class="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 4v16m8-8H4"
+                        />
+                    </svg>
+                    Ajouter une nouvelle recette
+                </a>
+            )
+        }
+    </section>
+</Layout>

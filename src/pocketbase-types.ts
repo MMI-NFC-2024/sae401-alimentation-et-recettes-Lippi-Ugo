@@ -171,11 +171,18 @@ export enum RecetteStatutOptions {
 	"approuve" = "approuve",
 	"rejete" = "rejete",
 }
+
+export enum RecetteDifficulteOptions {
+	"Facile" = "Facile",
+	"Moyen" = "Moyen",
+	"Difficile" = "Difficile",
+}
 export type RecetteRecord<Tingredients = unknown> = {
 	auteur_id: RecordIdString
 	calories_par_part?: number
 	categorie?: RecetteCategorieOptions
 	description?: string
+	difficulte?: RecetteDifficulteOptions
 	favoris?: RecordIdString
 	id: string
 	image?: FileNameString
