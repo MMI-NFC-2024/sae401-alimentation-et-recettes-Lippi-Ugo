@@ -1,0 +1,912 @@
+---
+import CardRecette from "../../components/CardRecette.astro";
+import ImgPb from "../../components/ImgPb.astro";
+import Layout from "../../layouts/Layout.astro";
+import type {
+    AlimentResponse,
+    CategorieRecetteResponse,
+    ComposerQuantiteResponse,
+    ProduitSponsoriseResponse,
+    RecetteCategorieResponse,
+    RecetteProduitRecommandeResponse,
+    RecetteRegimeCompatibleResponse,
+    RecetteResponse,
+    RegimeAlimentaireResponse,
+} from "../../pocketbase-types";
+
+export const prerender = false;
+
+const { id } = Astro.params as { id: string };
+
+const recette = await Astro.locals.pb
+    .collection("recette")
+    .getOne<RecetteResponse>(id);
+
+const [
+    produitsSponsorises,
+    toutesRecettes,
+    toutesCategories,
+    toutesLiaisonsCategorie,
+    tousRegimes,
+    toutesLiaisonsRegime,
+    liaisonsProduit,
+    liaisonsIngredients,
+    aliments,
+] = await Promise.all([
+    Astro.locals.pb
+        .collection("produit_sponsorise")
+        .getFullList<ProduitSponsoriseResponse>(),
+    Astro.locals.pb.collection("recette").getFullList<RecetteResponse>(),
+    Astro.locals.pb
+        .collection("categorie_recette")
+        .getFullList<CategorieRecetteResponse>(),
+    Astro.locals.pb
+        .collection("recette_categorie")
+        .getFullList<RecetteCategorieResponse>(),
+    Astro.locals.pb
+        .collection("regime_alimentaire")
+        .getFullList<RegimeAlimentaireResponse>(),
+    Astro.locals.pb
+        .collection("recette_regime_compatible")
+        .getFullList<RecetteRegimeCompatibleResponse>(),
+    Astro.locals.pb
+        .collection("recette_produit_recommande")
+        .getFullList<RecetteProduitRecommandeResponse>(),
+    Astro.locals.pb
+        .collection("composer_quantite")
+        .getFullList<ComposerQuantiteResponse>(),
+    Astro.locals.pb.collection("aliment").getFullList<AlimentResponse>(),
+]);
+
+const categorieParId = new Map(
+    toutesCategories.map((item) => [item.id, item.nom]),
+);
+const regimeParId = new Map(tousRegimes.map((item) => [item.id, item.nom]));
+const produitParId = new Map(
+    produitsSponsorises.map((item) => [item.id, item]),
+);
+const alimentParId = new Map(aliments.map((item) => [item.id, item.nom]));
+
+const categoriesParRecette = toutesLiaisonsCategorie.reduce(
+    (acc, lien) => {
+        if (!acc[lien.recette_id]) acc[lien.recette_id] = [];
+        acc[lien.recette_id].push(lien.categorie_id);
+        return acc;
+    },
+    {} as Record<string, string[]>,
+);
+
+const regimesParRecette = toutesLiaisonsRegime.reduce(
+    (acc, lien) => {
+        const regimeNom = regimeParId.get(lien.regime_id);
+        if (!regimeNom) return acc;
+        if (!acc[lien.recette_id]) acc[lien.recette_id] = [];
+        acc[lien.recette_id].push(regimeNom);
+        return acc;
+    },
+    {} as Record<string, string[]>,
+);
+
+const regimesRecette =
+    regimesParRecette[recette.id] && regimesParRecette[recette.id].length > 0
+        ? regimesParRecette[recette.id]
+        : recette.regime
+          ? [recette.regime]
+          : [];
+
+const sponsorsCote = liaisonsProduit
+    .filter((item) => item.recette_id === recette.id)
+    .map((item) => produitParId.get(item.produit_id))
+    .filter((item): item is ProduitSponsoriseResponse => Boolean(item))
+    .slice(0, 2);
+
+const sponsorsCoteFinal =
+    sponsorsCote.length > 0 ? sponsorsCote : produitsSponsorises.slice(0, 2);
+
+const categoriesRecette = categoriesParRecette[recette.id] || [];
+
+const recettesMemeCategorie = toutesRecettes.filter((item) => {
+    if (item.id === recette.id) return false;
+
+    const categoriesItem = categoriesParRecette[item.id] || [];
+
+    if (categoriesRecette.length > 0 && categoriesItem.length > 0) {
+        return categoriesItem.some((catId) =>
+            categoriesRecette.includes(catId),
+        );
+    }
+
+    return Boolean(recette.categorie && item.categorie === recette.categorie);
+});
+
+const autresRecettes = toutesRecettes.filter(
+    (item) =>
+        item.id !== recette.id &&
+        !recettesMemeCategorie.some((similaire) => similaire.id === item.id),
+);
+
+const recettesSimilaires = [...recettesMemeCategorie, ...autresRecettes].slice(
+    0,
+    3,
+);
+
+const normaliserTexte = (valeur: unknown) => {
+    if (typeof valeur !== "string") return "";
+    return valeur
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+};
+
+const parseIngredients = (valeur: unknown) => {
+    const resultat: Array<{ nom: string; quantite: string }> = [];
+
+    const parserTableau = (tableau: unknown[]) => {
+        tableau.forEach((item) => {
+            if (typeof item === "string") {
+                const texte = item.trim();
+                if (texte) resultat.push({ nom: texte, quantite: "" });
+                return;
+            }
+
+            if (item && typeof item === "object") {
+                const dictionnaire = item as Record<string, unknown>;
+                const nom =
+                    normaliserTexte(dictionnaire.nom) ||
+                    normaliserTexte(dictionnaire.name) ||
+                    normaliserTexte(dictionnaire.ingredient) ||
+                    normaliserTexte(dictionnaire.label);
+                const quantite =
+                    normaliserTexte(dictionnaire.quantite) ||
+                    normaliserTexte(dictionnaire.quantity) ||
+                    normaliserTexte(dictionnaire.qty);
+
+                if (nom) {
+                    resultat.push({ nom, quantite });
+                }
+            }
+        });
+    };
+
+    if (Array.isArray(valeur)) {
+        parserTableau(valeur);
+    } else if (typeof valeur === "string") {
+        try {
+            const json = JSON.parse(valeur);
+            if (Array.isArray(json)) parserTableau(json);
+        } catch (_error) {
+            const lignes = valeur
+                .split("\n")
+                .map((ligne) => ligne.trim())
+                .filter(Boolean);
+            lignes.forEach((ligne) =>
+                resultat.push({ nom: ligne, quantite: "" }),
+            );
+        }
+    }
+
+    return resultat;
+};
+
+const parseEtapes = (valeur: unknown) => {
+    if (typeof valeur !== "string" || !valeur.trim()) return [] as string[];
+
+    const etapesLi = [...valeur.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)]
+        .map((match) => normaliserTexte(match[1]))
+        .filter(Boolean);
+
+    if (etapesLi.length > 0) return etapesLi;
+
+    const texteNettoye = valeur.replace(/<[^>]*>/g, "\n");
+
+    return texteNettoye
+        .split("\n")
+        .map((ligne) => ligne.trim())
+        .filter(Boolean);
+};
+
+// Build ingredients with nutritional data
+const creerMapAlimentComplet = () => {
+    const map = new Map<string, AlimentResponse>();
+    aliments.forEach((aliment) => {
+        map.set(aliment.id, aliment);
+    });
+    return map;
+};
+
+const alimentCompletParId = creerMapAlimentComplet();
+
+const ingredientsRelationnels = liaisonsIngredients
+    .filter((item) => item.recette_id === recette.id)
+    .map((item) => {
+        const aliment = alimentCompletParId.get(item.aliment_id);
+        return {
+            id: item.aliment_id,
+            nom: aliment?.nom || "Ingrédient",
+            quantite: item.quantite,
+            unite: item.unite,
+            quantiteAffichee: `${item.quantite}${item.unite ? ` ${item.unite}` : ""}`,
+            aliment: aliment || null,
+        };
+    });
+
+const ingredients =
+    ingredientsRelationnels.length > 0
+        ? ingredientsRelationnels
+        : parseIngredients(recette.ingredients).map((ing) => ({
+              id: "",
+              nom: ing.nom,
+              quantite: 0,
+              unite: "",
+              quantiteAffichee: ing.quantite,
+              aliment: null,
+          }));
+
+const etapes = parseEtapes(recette.instructions);
+
+const partsDefaut =
+    recette.nb_parts && recette.nb_parts > 0 ? recette.nb_parts : 2;
+const caloriesParPart = recette.calories_par_part ?? 0;
+
+// Calculate total nutritional values per part
+const calculerNutritionParPart = () => {
+    let totalProteines = 0;
+    let totalGlucides = 0;
+    let totalLipides = 0;
+    let totalFibres = 0;
+
+    ingredientsRelationnels.forEach((ingredient) => {
+        if (!ingredient.aliment) return;
+
+        const quantiteEnG =
+            ingredient.unite === "g"
+                ? ingredient.quantite
+                : ingredient.unite === "ml"
+                  ? ingredient.quantite * 1 // ml ≈ g for water-based foods
+                  : ingredient.unite === "piece"
+                    ? ingredient.quantite * 100 // assume 100g per unit
+                    : 0;
+
+        const ratioCalories =
+            ingredient.aliment.calories_100g > 0 ? quantiteEnG / 100 : 0;
+
+        totalProteines += (ingredient.aliment.proteines || 0) * ratioCalories;
+        totalGlucides += (ingredient.aliment.glucides || 0) * ratioCalories;
+        totalLipides += (ingredient.aliment.lipides || 0) * ratioCalories;
+        totalFibres += (ingredient.aliment.fibres || 0) * ratioCalories;
+    });
+
+    return {
+        proteines: Math.round(totalProteines * 10) / 10,
+        glucides: Math.round(totalGlucides * 10) / 10,
+        lipides: Math.round(totalLipides * 10) / 10,
+        fibres: Math.round(totalFibres * 10) / 10,
+    };
+};
+
+const nutritionParPart = calculerNutritionParPart();
+
+const difficulteClasses =
+    recette.difficulte === "Facile"
+        ? "bg-emerald-100 text-emerald-700"
+        : recette.difficulte === "Moyen"
+          ? "bg-amber-100 text-amber-700"
+          : recette.difficulte === "Difficile"
+            ? "bg-rose-100 text-rose-700"
+            : "bg-slate-200 text-slate-700";
+---
+
+<Layout titre={recette.nom}>
+    <section class="container mx-auto px-6 py-10 lg:py-14">
+        <a
+            href="/recettes"
+            class="mb-6 inline-flex items-center text-sm font-medium text-slate-600 transition-colors hover:text-(--color-primary-dark)"
+        >
+            ← Retour aux recettes
+        </a>
+
+        <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <article
+                class="overflow-hidden rounded-2xl border border-slate-200 bg-white"
+            >
+                <ImgPb
+                    record={recette}
+                    field="image"
+                    alt={recette.nom}
+                    classPicture="h-[340px] w-full bg-slate-200"
+                    classImg="h-[340px] w-full object-cover"
+                    thumb="1300x700"
+                />
+
+                <div class="p-5 lg:p-6">
+                    <div class="mb-2 flex items-start justify-between gap-3">
+                        <h1
+                            class="text-4xl font-semibold leading-tight text-slate-900"
+                        >
+                            {recette.nom}
+                        </h1>
+                        <div class="flex items-center gap-2">
+                            <button
+                                type="button"
+                                class="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                                aria-label="Ajouter aux favoris"
+                            >
+                                <svg
+                                    class="h-5 w-5"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                >
+                                    <path
+                                        d="M12 21s-7-4.35-7-11a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 6.65-7 11-7 11Z"
+                                    ></path>
+                                </svg>
+                            </button>
+
+                            <span
+                                class={`rounded-full px-2 py-1 text-xs font-semibold ${difficulteClasses}`}
+                            >
+                                {recette.difficulte || "Non renseignee"}
+                            </span>
+                        </div>
+                    </div>
+
+                    <p class="mb-4 text-slate-600">
+                        {
+                            recette.description ||
+                                "Une recette equilibree et savoureuse a tester des aujourd'hui."
+                        }
+                    </p>
+
+                    <div
+                        class="mb-5 flex flex-wrap items-center gap-4 text-sm text-slate-600"
+                    >
+                        <span class="inline-flex items-center gap-1.5">
+                            <span class="text-(--color-primary)">◷</span>
+                            Preparation: {recette.temps_preparation ?? 0} min
+                        </span>
+                        <span class="inline-flex items-center gap-1.5">
+                            <span class="text-(--color-primary)">◷</span>
+                            Cuisson: {recette.temps_cuisson ?? 0} min
+                        </span>
+                        <span class="inline-flex items-center gap-1.5">
+                            <span class="text-(--color-primary)">👥</span>
+                            {partsDefaut} part{partsDefaut > 1 ? "s" : ""}
+                        </span>
+                    </div>
+
+                    <section class="mb-5 rounded-xl bg-emerald-50 p-4">
+                        <h2 class="mb-3 text-xl font-semibold text-slate-900">
+                            Calculateur de portions
+                        </h2>
+                        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                            <div>
+                                <label
+                                    for="portion-input"
+                                    class="mb-1 block text-xs text-slate-500"
+                                >
+                                    Nombre de parts
+                                </label>
+                                <input
+                                    id="portion-input"
+                                    type="number"
+                                    min="1"
+                                    value={partsDefaut}
+                                    class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                                    onchange="updateCalories()"
+                                    onblur="validateParts()"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="calories-total-input"
+                                    class="mb-1 block text-xs text-slate-500"
+                                >
+                                    Calories totales souhaitees
+                                </label>
+                                <input
+                                    id="calories-total-input"
+                                    type="number"
+                                    min="0"
+                                    value={partsDefaut * caloriesParPart}
+                                    placeholder="Laissez vide ou entrez un nombre"
+                                    class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                                    onchange="updateByCalories()"
+                                />
+                            </div>
+                        </div>
+                        <p class="mt-2 text-xs text-slate-500">
+                            Soit environ {caloriesParPart} calories par part.
+                        </p>
+                    </section>
+
+                    <section class="mb-6 rounded-xl bg-slate-50 p-4">
+                        <h2 class="mb-3 text-lg font-semibold text-slate-900">
+                            Valeurs nutritionnelles par part
+                        </h2>
+
+                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                            <div class="text-center">
+                                <p
+                                    id="calories-per-part"
+                                    class="text-2xl font-bold text-(--color-primary)"
+                                >
+                                    {caloriesParPart}
+                                </p>
+                                <p class="text-xs text-slate-500">Kcal</p>
+                            </div>
+                            <div class="text-center">
+                                <p
+                                    id="proteines-per-part"
+                                    class="text-2xl font-bold text-blue-500"
+                                >
+                                    {nutritionParPart.proteines}
+                                </p>
+                                <p class="text-xs text-slate-500">
+                                    Proteines (g)
+                                </p>
+                            </div>
+                            <div class="text-center">
+                                <p
+                                    id="glucides-per-part"
+                                    class="text-2xl font-bold text-orange-500"
+                                >
+                                    {nutritionParPart.glucides}
+                                </p>
+                                <p class="text-xs text-slate-500">
+                                    Glucides (g)
+                                </p>
+                            </div>
+                            <div class="text-center">
+                                <p
+                                    id="lipides-per-part"
+                                    class="text-2xl font-bold text-rose-500"
+                                >
+                                    {nutritionParPart.lipides}
+                                </p>
+                                <p class="text-xs text-slate-500">
+                                    Lipides (g)
+                                </p>
+                            </div>
+                            <div class="text-center">
+                                <p
+                                    id="fibres-per-part"
+                                    class="text-2xl font-bold text-violet-500"
+                                >
+                                    {nutritionParPart.fibres}
+                                </p>
+                                <p class="text-xs text-slate-500">Fibres (g)</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 border-t border-slate-200 pt-4">
+                            <h3
+                                class="mb-3 text-sm font-semibold text-slate-900"
+                            >
+                                Valeurs nutritionnelles totales (<span
+                                    id="parts-label">{partsDefaut}</span
+                                > part{partsDefaut > 1 ? "s" : ""})
+                            </h3>
+
+                            <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                                <div class="text-center">
+                                    <p
+                                        id="calories-total-value"
+                                        class="text-2xl font-bold text-(--color-primary)"
+                                    >
+                                        {partsDefaut * caloriesParPart}
+                                    </p>
+                                    <p class="text-xs text-slate-500">Kcal</p>
+                                </div>
+                                <div class="text-center">
+                                    <p
+                                        id="proteines-total-value"
+                                        class="text-2xl font-bold text-blue-500"
+                                    >
+                                        {
+                                            Math.round(
+                                                nutritionParPart.proteines *
+                                                    partsDefaut *
+                                                    10,
+                                            ) / 10
+                                        }
+                                    </p>
+                                    <p class="text-xs text-slate-500">
+                                        Proteines (g)
+                                    </p>
+                                </div>
+                                <div class="text-center">
+                                    <p
+                                        id="glucides-total-value"
+                                        class="text-2xl font-bold text-orange-500"
+                                    >
+                                        {
+                                            Math.round(
+                                                nutritionParPart.glucides *
+                                                    partsDefaut *
+                                                    10,
+                                            ) / 10
+                                        }
+                                    </p>
+                                    <p class="text-xs text-slate-500">
+                                        Glucides (g)
+                                    </p>
+                                </div>
+                                <div class="text-center">
+                                    <p
+                                        id="lipides-total-value"
+                                        class="text-2xl font-bold text-rose-500"
+                                    >
+                                        {
+                                            Math.round(
+                                                nutritionParPart.lipides *
+                                                    partsDefaut *
+                                                    10,
+                                            ) / 10
+                                        }
+                                    </p>
+                                    <p class="text-xs text-slate-500">
+                                        Lipides (g)
+                                    </p>
+                                </div>
+                                <div class="text-center">
+                                    <p
+                                        id="fibres-total-value"
+                                        class="text-2xl font-bold text-violet-500"
+                                    >
+                                        {
+                                            Math.round(
+                                                nutritionParPart.fibres *
+                                                    partsDefaut *
+                                                    10,
+                                            ) / 10
+                                        }
+                                    </p>
+                                    <p class="text-xs text-slate-500">
+                                        Fibres (g)
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="mb-6">
+                        <h2 class="mb-3 text-3xl font-semibold text-slate-900">
+                            Ingredients (pour <span id="current-parts"
+                                >{partsDefaut}</span
+                            > parts)
+                        </h2>
+                        {
+                            ingredients.length > 0 ? (
+                                <div class="space-y-2" id="ingredients-list">
+                                    {ingredients.map((ingredient, index) => (
+                                        <div
+                                            class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+                                            data-ingredient-index={index}
+                                            data-base-quantite={
+                                                ingredient.quantite
+                                            }
+                                            data-unite={ingredient.unite}
+                                        >
+                                            <div class="flex-1">
+                                                <span class="font-medium text-slate-900">
+                                                    {ingredient.nom}
+                                                </span>
+                                                <span class="ml-2 text-slate-500 ingredient-quantite">
+                                                    -{" "}
+                                                    {
+                                                        ingredient.quantiteAffichee
+                                                    }
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p class="text-sm text-slate-500">
+                                    Ingredients non renseignes.
+                                </p>
+                            )
+                        }
+                    </section>
+
+                    <section class="mb-6">
+                        <h2 class="mb-3 text-3xl font-semibold text-slate-900">
+                            Preparation
+                        </h2>
+                        {
+                            etapes.length > 0 ? (
+                                <ol class="space-y-2">
+                                    {etapes.map((etape, index) => (
+                                        <li class="flex items-start gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                                            <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-(--color-primary) text-xs font-semibold text-white">
+                                                {index + 1}
+                                            </span>
+                                            <span>{etape}</span>
+                                        </li>
+                                    ))}
+                                </ol>
+                            ) : (
+                                <p class="text-sm text-slate-500">
+                                    Preparation non renseignee.
+                                </p>
+                            )
+                        }
+                    </section>
+
+                    <section>
+                        <h2 class="mb-2 text-2xl font-semibold text-slate-900">
+                            Adapte aux regimes
+                        </h2>
+                        <div class="flex flex-wrap gap-2">
+                            {
+                                regimesRecette.length > 0 ? (
+                                    regimesRecette.map((regimeNom) => (
+                                        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                            {regimeNom}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
+                                        Aucun regime specifie
+                                    </span>
+                                )
+                            }
+                        </div>
+                    </section>
+                </div>
+            </article>
+
+            <aside class="space-y-4">
+                {
+                    sponsorsCoteFinal.map((produit) => (
+                        <article class="relative overflow-hidden rounded-xl border border-amber-300 bg-amber-50 p-2.5">
+                            <span class="absolute right-1.5 top-1.5 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+                                Sponsorise
+                            </span>
+
+                            <ImgPb
+                                record={produit}
+                                field="image"
+                                alt={produit.nom}
+                                classPicture="mb-2 h-32 w-full overflow-hidden rounded-lg bg-slate-200"
+                                classImg="h-full w-full object-cover"
+                                thumb="500x300"
+                            />
+
+                            <h3 class="mb-1 text-sm font-semibold text-slate-900">
+                                {produit.nom}
+                            </h3>
+                            <p class="mb-2 line-clamp-2 text-xs text-slate-600">
+                                {produit.description || "Produit recommande."}
+                            </p>
+                            <div class="flex items-center justify-between gap-2">
+                                <p class="text-lg font-bold text-(--color-primary)">
+                                    {produit.prix || "Prix n/r"}
+                                </p>
+                                {produit.lien_affiliation ? (
+                                    <a
+                                        href={produit.lien_affiliation}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="text-xs font-semibold text-amber-700 hover:underline"
+                                    >
+                                        En savoir plus ↗
+                                    </a>
+                                ) : (
+                                    <span class="text-xs text-slate-500">
+                                        Lien indisponible
+                                    </span>
+                                )}
+                            </div>
+                        </article>
+                    ))
+                }
+            </aside>
+        </div>
+
+        {
+            recettesSimilaires.length > 0 && (
+                <section class="mt-10">
+                    <h2 class="mb-4 text-3xl font-semibold text-slate-900">
+                        Recettes similaires
+                    </h2>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {recettesSimilaires.map((item) => (
+                            <CardRecette recette={item} />
+                        ))}
+                    </div>
+                </section>
+            )
+        }
+    </section>
+
+    <script
+        define:vars={{
+            calorieParPartInitial: caloriesParPart,
+            nutritionParPartInitial: nutritionParPart,
+        }}
+    >
+        const inputParts = document.getElementById("portion-input");
+        const inputCaloriesTotal = document.getElementById(
+            "calories-total-input",
+        );
+        const labelParts = document.getElementById("parts-label");
+        const labelCaloriesTotal = document.getElementById(
+            "calories-total-value",
+        );
+
+        const updateCalories = () => {
+            if (!(inputParts instanceof HTMLInputElement)) return;
+            if (!(inputCaloriesTotal instanceof HTMLInputElement)) return;
+            if (!(labelParts instanceof HTMLSpanElement)) return;
+
+            // Get value as-is, accept decimals
+            let partsValue = inputParts.value.trim();
+            if (partsValue === "" || Number.isNaN(Number(partsValue))) {
+                return; // Let user continue typing
+            }
+
+            const parts = Number.parseFloat(partsValue);
+            if (parts < 0.1) return; // Don't update if invalid
+
+            const totalCalories = Math.round(parts * calorieParPartInitial);
+
+            inputCaloriesTotal.value = String(totalCalories);
+            labelParts.textContent =
+                parts === Math.round(parts)
+                    ? String(Math.round(parts))
+                    : String(parts);
+
+            // Update total nutrition values
+            updateNutritionDisplay(parts);
+            updateIngredientsQuantities(parts);
+        };
+
+        const validateParts = () => {
+            if (!(inputParts instanceof HTMLInputElement)) return;
+
+            let parts = Number.parseFloat(inputParts.value || "1");
+            if (Number.isNaN(parts) || parts < 0.1) {
+                parts = 1;
+            }
+
+            // Round to 2 decimal places
+            parts = Math.round(parts * 100) / 100;
+
+            inputParts.value = String(parts);
+            updateCalories(); // Recalculate after validation
+        };
+
+        const updateByCalories = () => {
+            if (!(inputCaloriesTotal instanceof HTMLInputElement)) return;
+            if (!(inputParts instanceof HTMLInputElement)) return;
+            if (!(labelParts instanceof HTMLSpanElement)) return;
+
+            const caloriesEntered = Number.parseFloat(
+                inputCaloriesTotal.value || "0",
+            );
+            if (caloriesEntered <= 0) return;
+
+            // Calculate exact parts with decimals
+            const partsCalculated = caloriesEntered / calorieParPartInitial;
+            const partsRounded = Math.max(
+                0.1,
+                Number.parseFloat(partsCalculated.toFixed(2)),
+            );
+
+            inputParts.value = String(partsRounded);
+            inputCaloriesTotal.value = String(
+                Math.round(partsRounded * calorieParPartInitial),
+            );
+            labelParts.textContent =
+                partsRounded === Math.round(partsRounded)
+                    ? String(Math.round(partsRounded))
+                    : String(partsRounded);
+
+            // Update total nutrition values
+            updateNutritionDisplay(partsRounded);
+            updateIngredientsQuantities(partsRounded);
+        };
+        const updateIngredientsQuantities = (parts) => {
+            const ingredientsList = document.getElementById("ingredients-list");
+            const currentPartsLabel = document.getElementById("current-parts");
+
+            if (!ingredientsList) return;
+
+            const displayParts =
+                parts === Math.round(parts)
+                    ? String(Math.round(parts))
+                    : String(parts);
+            if (currentPartsLabel) currentPartsLabel.textContent = displayParts;
+
+            const ingredients = ingredientsList.querySelectorAll(
+                "[data-ingredient-index]",
+            );
+            ingredients.forEach((el) => {
+                const baseQuantite = Number.parseFloat(
+                    el.getAttribute("data-base-quantite") || "0",
+                );
+                const unite = el.getAttribute("data-unite") || "";
+                const quantiteSpan = el.querySelector(".ingredient-quantite");
+
+                if (quantiteSpan) {
+                    const newQuantite = baseQuantite * parts;
+                    const displayQuantite =
+                        newQuantite === Math.round(newQuantite)
+                            ? String(Math.round(newQuantite))
+                            : String(Math.round(newQuantite * 100) / 100);
+                    quantiteSpan.textContent = `- ${displayQuantite}${unite ? ` ${unite}` : ""}`;
+                }
+            });
+        };
+        const updateNutritionDisplay = (parts) => {
+            const proteinesPerPart =
+                document.getElementById("proteines-per-part");
+            const glucidesPerPart =
+                document.getElementById("glucides-per-part");
+            const lipidesPerPart = document.getElementById("lipides-per-part");
+            const fibresPerPart = document.getElementById("fibres-per-part");
+
+            const proteinesTotal = document.getElementById(
+                "proteines-total-value",
+            );
+            const glucidesTotal = document.getElementById(
+                "glucides-total-value",
+            );
+            const lipidesTotal = document.getElementById("lipides-total-value");
+            const fibresTotal = document.getElementById("fibres-total-value");
+            const caloriesTotal = document.getElementById(
+                "calories-total-value",
+            );
+
+            // Update per-part values (they don't change)
+            if (proteinesPerPart)
+                proteinesPerPart.textContent = String(
+                    nutritionParPartInitial.proteines,
+                );
+            if (glucidesPerPart)
+                glucidesPerPart.textContent = String(
+                    nutritionParPartInitial.glucides,
+                );
+            if (lipidesPerPart)
+                lipidesPerPart.textContent = String(
+                    nutritionParPartInitial.lipides,
+                );
+            if (fibresPerPart)
+                fibresPerPart.textContent = String(
+                    nutritionParPartInitial.fibres,
+                );
+
+            // Update total values
+            const proteinesTotales =
+                Math.round(nutritionParPartInitial.proteines * parts * 10) / 10;
+            const glucidesTotales =
+                Math.round(nutritionParPartInitial.glucides * parts * 10) / 10;
+            const lipidesTotales =
+                Math.round(nutritionParPartInitial.lipides * parts * 10) / 10;
+            const fibresTotales =
+                Math.round(nutritionParPartInitial.fibres * parts * 10) / 10;
+            const caloriesTotales = Math.round(calorieParPartInitial * parts);
+
+            if (proteinesTotal)
+                proteinesTotal.textContent = String(proteinesTotales);
+            if (glucidesTotal)
+                glucidesTotal.textContent = String(glucidesTotales);
+            if (lipidesTotal) lipidesTotal.textContent = String(lipidesTotales);
+            if (fibresTotal) fibresTotal.textContent = String(fibresTotales);
+            if (caloriesTotal)
+                caloriesTotal.textContent = String(caloriesTotales);
+        };
+
+        if (inputParts instanceof HTMLInputElement) {
+            inputParts.addEventListener("change", updateCalories);
+            inputParts.addEventListener("input", updateCalories);
+        }
+
+        if (inputCaloriesTotal instanceof HTMLInputElement) {
+            inputCaloriesTotal.addEventListener("change", updateByCalories);
+        }
+    </script>
+</Layout>

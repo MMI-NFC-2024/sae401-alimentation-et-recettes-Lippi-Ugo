@@ -3,30 +3,91 @@ import LinkRecette from "../../components/LinkRecette.astro";
 import LinkProduitSponsorise from "../../components/LinkProduitSponsorise.astro";
 import Layout from "../../layouts/Layout.astro";
 import {
-    RecetteRegimeOptions,
+    type CategorieRecetteResponse,
     type ProduitSponsoriseResponse,
+    type RecetteCategorieResponse,
+    type RecetteRegimeCompatibleResponse,
     type RecetteResponse,
+    type RegimeAlimentaireResponse,
 } from "../../pocketbase-types";
 
-const toutesRecettes = await Astro.locals.pb
-    .collection("recette")
-    .getFullList<RecetteResponse>();
+const [
+    toutesRecettes,
+    produitsSponsorises,
+    categoriesRef,
+    liensRecetteCategorie,
+    regimesRef,
+    liensRecetteRegime,
+] = await Promise.all([
+    Astro.locals.pb.collection("recette").getFullList<RecetteResponse>(),
+    Astro.locals.pb
+        .collection("produit_sponsorise")
+        .getFullList<ProduitSponsoriseResponse>(),
+    Astro.locals.pb
+        .collection("categorie_recette")
+        .getFullList<CategorieRecetteResponse>(),
+    Astro.locals.pb
+        .collection("recette_categorie")
+        .getFullList<RecetteCategorieResponse>(),
+    Astro.locals.pb
+        .collection("regime_alimentaire")
+        .getFullList<RegimeAlimentaireResponse>(),
+    Astro.locals.pb
+        .collection("recette_regime_compatible")
+        .getFullList<RecetteRegimeCompatibleResponse>(),
+]);
+
 const recettes = [...toutesRecettes].sort((a, b) => a.nom.localeCompare(b.nom));
 
-const produitsSponsorises = await Astro.locals.pb
-    .collection("produit_sponsorise")
-    .getFullList<ProduitSponsoriseResponse>();
+const categorieParId = new Map(
+    categoriesRef.map((item) => [item.id, item.nom]),
+);
+const regimeParId = new Map(regimesRef.map((item) => [item.id, item.nom]));
+
+const categoriesParRecette = liensRecetteCategorie.reduce(
+    (acc, lien) => {
+        const categorie = categorieParId.get(lien.categorie_id);
+        if (!categorie) return acc;
+        if (!acc[lien.recette_id]) acc[lien.recette_id] = [];
+        acc[lien.recette_id].push(categorie);
+        return acc;
+    },
+    {} as Record<string, string[]>,
+);
+
+const regimesParRecette = liensRecetteRegime.reduce(
+    (acc, lien) => {
+        const regime = regimeParId.get(lien.regime_id);
+        if (!regime) return acc;
+        if (!acc[lien.recette_id]) acc[lien.recette_id] = [];
+        acc[lien.recette_id].push(regime);
+        return acc;
+    },
+    {} as Record<string, string[]>,
+);
+
+const categorieDeRecette = (recette: RecetteResponse) =>
+    categoriesParRecette[recette.id]?.[0] || recette.categorie || "";
+
+const regimesDeRecette = (recette: RecetteResponse) => {
+    const valeurs = regimesParRecette[recette.id] || [];
+    if (valeurs.length > 0) return valeurs;
+    return recette.regime ? [recette.regime] : [];
+};
+
+const recettesAvecRelations = recettes.map((recette) => ({
+    recette,
+    categorie: categorieDeRecette(recette),
+    regimes: regimesDeRecette(recette),
+}));
 
 const produitsSponsorisesAffichees = produitsSponsorises.slice(0, 3);
 
 const categoriesDisponibles = [
     ...new Set(
-        toutesRecettes
-            .map((recette) => recette.categorie)
-            .filter(
-                (value): value is NonNullable<RecetteResponse["categorie"]> =>
-                    Boolean(value),
-            ),
+        recettesAvecRelations
+            .map((item) => item.categorie)
+            .filter((value): value is string => Boolean(value)),
     ),
 ].sort((a, b) => a.localeCompare(b));
 
@@ -41,7 +102,11 @@ const difficultesDisponibles = [
     ),
 ].sort((a, b) => a.localeCompare(b));
 
-const tagsRegimes = Object.values(RecetteRegimeOptions);
+const tagsRegimes = [
+    ...new Set(
+        recettesAvecRelations.flatMap((item) => item.regimes).filter(Boolean),
+    ),
+].sort((a, b) => a.localeCompare(b));
 ---
 
 <Layout titre="Recettes">
@@ -113,7 +178,7 @@ const tagsRegimes = Object.values(RecetteRegimeOptions);
 
                 <div class="mt-3 flex items-center justify-between gap-3">
                     <p id="compteur-recettes" class="text-xs text-slate-500">
-                        {recettes.length} recettes trouvees
+                        {recettesAvecRelations.length} recettes trouvees
                     </p>
 
                     <div class="flex items-center gap-2">
@@ -134,15 +199,15 @@ const tagsRegimes = Object.values(RecetteRegimeOptions);
             class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
         >
             {
-                recettes.map((recette) => (
+                recettesAvecRelations.map((item) => (
                     <div
                         class="recette-item"
-                        data-nom={recette.nom.toLowerCase()}
-                        data-categorie={recette.categorie || ""}
-                        data-difficulte={recette.difficulte || ""}
-                        data-regime={recette.regime || ""}
+                        data-nom={item.recette.nom.toLowerCase()}
+                        data-categorie={item.categorie}
+                        data-difficulte={item.recette.difficulte || ""}
+                        data-regimes={item.regimes.join("|")}
                     >
-                        <LinkRecette recette={recette} />
+                        <LinkRecette recette={item.recette} />
                     </div>
                 ))
             }
@@ -250,14 +315,19 @@ const tagsRegimes = Object.values(RecetteRegimeOptions);
                 const nom = item.dataset.nom || "";
                 const itemCategorie = item.dataset.categorie || "";
                 const itemDifficulte = item.dataset.difficulte || "";
-                const itemRegime = item.dataset.regime || "";
+                const itemRegimes = item.dataset.regimes || "";
 
                 const matchNom = !terme || nom.includes(terme);
                 const matchCategorie =
                     !categorie || itemCategorie === categorie;
                 const matchDifficulte =
                     !difficulte || itemDifficulte === difficulte;
-                const matchRegime = !regimeActif || itemRegime === regimeActif;
+                const matchRegime =
+                    !regimeActif ||
+                    itemRegimes
+                        .split("|")
+                        .filter(Boolean)
+                        .includes(regimeActif);
                 const visible =
                     matchNom &&
                     matchCategorie &&
