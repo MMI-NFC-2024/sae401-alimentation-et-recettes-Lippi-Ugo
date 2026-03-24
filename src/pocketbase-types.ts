@@ -12,10 +12,21 @@ export enum Collections {
 	Otps = "_otps",
 	Superusers = "_superusers",
 	Aliment = "aliment",
+	CategorieRecette = "categorie_recette",
+	ComposerQuantite = "composer_quantite",
 	Conseil = "conseil",
+	ConseilDestinataire = "conseil_destinataire",
+	Favoris = "favoris",
+	ObjectifNutritionnel = "objectif_nutritionnel",
 	ProduitSponsorise = "produit_sponsorise",
 	Recette = "recette",
+	RecetteCategorie = "recette_categorie",
+	RecetteProduitRecommande = "recette_produit_recommande",
+	RecetteRegimeCompatible = "recette_regime_compatible",
 	Regime = "regime",
+	RegimeAlimentaire = "regime_alimentaire",
+	SuiviObjectif = "suivi_objectif",
+	SuiviRecette = "suivi_recette",
 	SuiviUtilisateur = "suivi_utilisateur",
 	Users = "users",
 }
@@ -112,6 +123,30 @@ export type AlimentRecord = {
 	updated: IsoAutoDateString
 }
 
+export type CategorieRecetteRecord = {
+	created: IsoAutoDateString
+	id: string
+	nom: string
+	updated: IsoAutoDateString
+}
+
+export enum ComposerQuantiteUniteOptions {
+	"g" = "g",
+	"ml" = "ml",
+	"cs" = "cs",
+	"cc" = "cc",
+	"piece" = "piece",
+}
+export type ComposerQuantiteRecord = {
+	aliment_id: RecordIdString
+	created: IsoAutoDateString
+	id: string
+	quantite: number
+	recette_id: RecordIdString
+	unite: ComposerQuantiteUniteOptions
+	updated: IsoAutoDateString
+}
+
 export enum ConseilStatutOptions {
 	"draft" = "draft",
 	"publie" = "publie",
@@ -128,13 +163,39 @@ export type ConseilRecord = {
 	updated: IsoAutoDateString
 }
 
+export type ConseilDestinataireRecord = {
+	conseil_id: RecordIdString
+	created: IsoAutoDateString
+	id: string
+	updated: IsoAutoDateString
+	utilisateur_id: RecordIdString
+}
+
+export type FavorisRecord = {
+	created: IsoAutoDateString
+	date_ajout?: IsoDateString
+	id: string
+	recette_id: RecordIdString
+	updated: IsoAutoDateString
+	utilisateur_id: RecordIdString
+}
+
+export type ObjectifNutritionnelRecord = {
+	created: IsoAutoDateString
+	id: string
+	nom: string
+	updated: IsoAutoDateString
+}
+
 export type ProduitSponsoriseRecord = {
+	created: IsoAutoDateString
 	description?: string
 	id: string
 	image?: FileNameString
 	lien_affiliation?: string
 	nom: string
 	prix?: string
+	updated: IsoAutoDateString
 }
 
 export enum RecetteCategorieOptions {
@@ -180,6 +241,7 @@ export type RecetteRecord<Tingredients = unknown> = {
 	auteur_id: RecordIdString
 	calories_par_part?: number
 	categorie?: RecetteCategorieOptions
+	created: IsoAutoDateString
 	description?: string
 	difficulte?: RecetteDifficulteOptions
 	favoris?: RecordIdString
@@ -194,6 +256,31 @@ export type RecetteRecord<Tingredients = unknown> = {
 	statut: RecetteStatutOptions
 	temps_cuisson?: number
 	temps_preparation?: number
+	updated: IsoAutoDateString
+}
+
+export type RecetteCategorieRecord = {
+	categorie_id: RecordIdString
+	created: IsoAutoDateString
+	id: string
+	recette_id: RecordIdString
+	updated: IsoAutoDateString
+}
+
+export type RecetteProduitRecommandeRecord = {
+	created: IsoAutoDateString
+	id: string
+	produit_id: RecordIdString
+	recette_id: RecordIdString
+	updated: IsoAutoDateString
+}
+
+export type RecetteRegimeCompatibleRecord = {
+	created: IsoAutoDateString
+	id: string
+	recette_id: RecordIdString
+	regime_id: RecordIdString
+	updated: IsoAutoDateString
 }
 
 export type RegimeRecord<Tbenefices = unknown> = {
@@ -203,6 +290,29 @@ export type RegimeRecord<Tbenefices = unknown> = {
 	id: string
 	image?: FileNameString
 	nom: string
+	updated: IsoAutoDateString
+}
+
+export type RegimeAlimentaireRecord = {
+	created: IsoAutoDateString
+	id: string
+	nom: string
+	updated: IsoAutoDateString
+}
+
+export type SuiviObjectifRecord = {
+	created: IsoAutoDateString
+	id: string
+	objectif_id: RecordIdString
+	suivi_id: RecordIdString
+	updated: IsoAutoDateString
+}
+
+export type SuiviRecetteRecord = {
+	created: IsoAutoDateString
+	id: string
+	recette_id: RecordIdString
+	suivi_id: RecordIdString
 	updated: IsoAutoDateString
 }
 
@@ -251,10 +361,21 @@ export type MfasResponse<Texpand = unknown> = Required<MfasRecord> & BaseSystemF
 export type OtpsResponse<Texpand = unknown> = Required<OtpsRecord> & BaseSystemFields<Texpand>
 export type SuperusersResponse<Texpand = unknown> = Required<SuperusersRecord> & AuthSystemFields<Texpand>
 export type AlimentResponse<Texpand = unknown> = Required<AlimentRecord> & BaseSystemFields<Texpand>
+export type CategorieRecetteResponse<Texpand = unknown> = Required<CategorieRecetteRecord> & BaseSystemFields<Texpand>
+export type ComposerQuantiteResponse<Texpand = unknown> = Required<ComposerQuantiteRecord> & BaseSystemFields<Texpand>
 export type ConseilResponse<Texpand = unknown> = Required<ConseilRecord> & BaseSystemFields<Texpand>
+export type ConseilDestinataireResponse<Texpand = unknown> = Required<ConseilDestinataireRecord> & BaseSystemFields<Texpand>
+export type FavorisResponse<Texpand = unknown> = Required<FavorisRecord> & BaseSystemFields<Texpand>
+export type ObjectifNutritionnelResponse<Texpand = unknown> = Required<ObjectifNutritionnelRecord> & BaseSystemFields<Texpand>
 export type ProduitSponsoriseResponse<Texpand = unknown> = Required<ProduitSponsoriseRecord> & BaseSystemFields<Texpand>
 export type RecetteResponse<Tingredients = unknown, Texpand = unknown> = Required<RecetteRecord<Tingredients>> & BaseSystemFields<Texpand>
+export type RecetteCategorieResponse<Texpand = unknown> = Required<RecetteCategorieRecord> & BaseSystemFields<Texpand>
+export type RecetteProduitRecommandeResponse<Texpand = unknown> = Required<RecetteProduitRecommandeRecord> & BaseSystemFields<Texpand>
+export type RecetteRegimeCompatibleResponse<Texpand = unknown> = Required<RecetteRegimeCompatibleRecord> & BaseSystemFields<Texpand>
 export type RegimeResponse<Tbenefices = unknown, Texpand = unknown> = Required<RegimeRecord<Tbenefices>> & BaseSystemFields<Texpand>
+export type RegimeAlimentaireResponse<Texpand = unknown> = Required<RegimeAlimentaireRecord> & BaseSystemFields<Texpand>
+export type SuiviObjectifResponse<Texpand = unknown> = Required<SuiviObjectifRecord> & BaseSystemFields<Texpand>
+export type SuiviRecetteResponse<Texpand = unknown> = Required<SuiviRecetteRecord> & BaseSystemFields<Texpand>
 export type SuiviUtilisateurResponse<Texpand = unknown> = Required<SuiviUtilisateurRecord> & BaseSystemFields<Texpand>
 export type UsersResponse<Texpand = unknown> = Required<UsersRecord> & AuthSystemFields<Texpand>
 
@@ -267,10 +388,21 @@ export type CollectionRecords = {
 	_otps: OtpsRecord
 	_superusers: SuperusersRecord
 	aliment: AlimentRecord
+	categorie_recette: CategorieRecetteRecord
+	composer_quantite: ComposerQuantiteRecord
 	conseil: ConseilRecord
+	conseil_destinataire: ConseilDestinataireRecord
+	favoris: FavorisRecord
+	objectif_nutritionnel: ObjectifNutritionnelRecord
 	produit_sponsorise: ProduitSponsoriseRecord
 	recette: RecetteRecord
+	recette_categorie: RecetteCategorieRecord
+	recette_produit_recommande: RecetteProduitRecommandeRecord
+	recette_regime_compatible: RecetteRegimeCompatibleRecord
 	regime: RegimeRecord
+	regime_alimentaire: RegimeAlimentaireRecord
+	suivi_objectif: SuiviObjectifRecord
+	suivi_recette: SuiviRecetteRecord
 	suivi_utilisateur: SuiviUtilisateurRecord
 	users: UsersRecord
 }
@@ -282,10 +414,21 @@ export type CollectionResponses = {
 	_otps: OtpsResponse
 	_superusers: SuperusersResponse
 	aliment: AlimentResponse
+	categorie_recette: CategorieRecetteResponse
+	composer_quantite: ComposerQuantiteResponse
 	conseil: ConseilResponse
+	conseil_destinataire: ConseilDestinataireResponse
+	favoris: FavorisResponse
+	objectif_nutritionnel: ObjectifNutritionnelResponse
 	produit_sponsorise: ProduitSponsoriseResponse
 	recette: RecetteResponse
+	recette_categorie: RecetteCategorieResponse
+	recette_produit_recommande: RecetteProduitRecommandeResponse
+	recette_regime_compatible: RecetteRegimeCompatibleResponse
 	regime: RegimeResponse
+	regime_alimentaire: RegimeAlimentaireResponse
+	suivi_objectif: SuiviObjectifResponse
+	suivi_recette: SuiviRecetteResponse
 	suivi_utilisateur: SuiviUtilisateurResponse
 	users: UsersResponse
 }
