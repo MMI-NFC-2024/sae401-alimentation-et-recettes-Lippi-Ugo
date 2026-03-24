@@ -1,0 +1,628 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Logo from "../assets/nutrirecette_logo.svg";
+
+export const prerender = false;
+
+let error = "";
+
+if (Astro.request.method === "POST") {
+    const data = await Astro.request.formData();
+
+    try {
+        const prenom = (data.get("prenom") as string)?.trim() || "";
+        const nom = (data.get("nom") as string)?.trim() || "";
+        const email = (data.get("email") as string)?.trim() || "";
+        const password = data.get("password") as string;
+        const passwordConfirm = data.get("passwordConfirm") as string;
+        const role = (data.get("role") as string) || "utilisateur";
+        const age = data.get("age") as string;
+        const sexe = data.get("sexe") as string;
+
+        // Validations
+        if (!email) {
+            error = "Email requis.";
+        } else if (!prenom) {
+            error = "Prénom requis.";
+        } else if (!nom) {
+            error = "Nom requis.";
+        } else if (!password) {
+            error = "Mot de passe requis.";
+        } else if (password.length < 5) {
+            error = "Le mot de passe doit faire au moins 5 caractères.";
+        } else if (password !== passwordConfirm) {
+            error = "Les mots de passe ne correspondent pas.";
+        } else {
+            // Créer l'utilisateur
+            const userData: any = {
+                email,
+                password,
+                passwordConfirm,
+                prenom,
+                nom,
+                role,
+            };
+
+            if (age) userData.age = parseInt(age);
+            if (sexe) userData.sexe = sexe;
+
+            await Astro.locals.pb.collection("users").create(userData);
+
+            // Auto-login
+            await Astro.locals.pb
+                .collection("users")
+                .authWithPassword(email, password);
+
+            Astro.response.headers.append(
+                "set-cookie",
+                Astro.locals.pb.authStore.exportToCookie(),
+            );
+
+            return Astro.redirect("/");
+        }
+    } catch (err) {
+        if (err instanceof Error) {
+            error = err.message;
+        }
+    }
+}
+---
+
+<Layout titre="Inscription">
+    <section
+        class="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 to-blue-50 px-4 py-12"
+    >
+        <div class="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
+            {/* HEADER */}
+            <div class="mb-8 text-center">
+                <div class="mb-4 flex justify-center">
+                    <Logo class="h-12 w-auto" />
+                </div>
+                <h2 class="text-center text-sm font-semibold text-slate-600">
+                    Créez votre compte gratuit
+                </h2>
+            </div>
+
+            {/* FORM */}
+            <div class="mb-8">
+                <h3 class="mb-1 font-semibold text-slate-900">Inscription</h3>
+                <p class="mb-6 text-sm text-slate-600">
+                    Rejoignez notre communauté de passionnés de nutrition
+                </p>
+
+                <form method="post" class="space-y-5">
+                    {/* PRENOM & NOM */}
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label
+                                for="prenom"
+                                class="mb-2 block text-sm font-semibold text-slate-700"
+                            >
+                                Prénom
+                            </label>
+                            <div class="relative">
+                                <svg
+                                    class="absolute left-3 top-2.5 h-5 w-5 text-slate-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                    >
+                                    </path>
+                                </svg>
+                                <input
+                                    type="text"
+                                    id="prenom"
+                                    name="prenom"
+                                    placeholder="Jean"
+                                    required
+                                    class="w-full rounded-lg bg-slate-100 py-2 pl-10 pr-4 text-slate-900 placeholder-slate-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label
+                                for="nom"
+                                class="mb-2 block text-sm font-semibold text-slate-700"
+                            >
+                                Nom
+                            </label>
+                            <div class="relative">
+                                <svg
+                                    class="absolute left-3 top-2.5 h-5 w-5 text-slate-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                    >
+                                    </path>
+                                </svg>
+                                <input
+                                    type="text"
+                                    id="nom"
+                                    name="nom"
+                                    placeholder="Dupont"
+                                    required
+                                    class="w-full rounded-lg bg-slate-100 py-2 pl-10 pr-4 text-slate-900 placeholder-slate-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* EMAIL */}
+                    <div>
+                        <label
+                            for="email"
+                            class="mb-2 block text-sm font-semibold text-slate-700"
+                        >
+                            Email
+                        </label>
+                        <div class="relative">
+                            <svg
+                                class="absolute left-3 top-2.5 h-5 w-5 text-slate-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                >
+                                </path>
+                            </svg>
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                placeholder="votre@email.fr"
+                                required
+                                class="w-full rounded-lg bg-slate-100 py-2 pl-10 pr-4 text-slate-900 placeholder-slate-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                            />
+                        </div>
+                    </div>
+
+                    {/* PASSWORD */}
+                    <div>
+                        <label
+                            for="password"
+                            class="mb-2 block text-sm font-semibold text-slate-700"
+                        >
+                            Mot de passe
+                        </label>
+                        <div class="relative">
+                            <svg
+                                class="absolute left-3 top-2.5 h-5 w-5 text-slate-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                >
+                                </path>
+                            </svg>
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                placeholder="••••••••"
+                                required
+                                minlength="5"
+                                class="w-full rounded-lg bg-slate-100 py-2 pl-10 pr-4 text-slate-900 placeholder-slate-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                            />
+                        </div>
+                    </div>
+
+                    {/* PASSWORD CONFIRM */}
+                    <div>
+                        <label
+                            for="passwordConfirm"
+                            class="mb-2 block text-sm font-semibold text-slate-700"
+                        >
+                            Confirmer le mot de passe
+                        </label>
+                        <div class="relative">
+                            <svg
+                                class="absolute left-3 top-2.5 h-5 w-5 text-slate-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                >
+                                </path>
+                            </svg>
+                            <input
+                                type="password"
+                                id="passwordConfirm"
+                                name="passwordConfirm"
+                                placeholder="••••••••"
+                                required
+                                minlength="5"
+                                class="w-full rounded-lg bg-slate-100 py-2 pl-10 pr-4 text-slate-900 placeholder-slate-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                            />
+                        </div>
+                    </div>
+
+                    {/* ACCOUNT TYPE */}
+                    <div>
+                        <label
+                            class="mb-3 block text-sm font-semibold text-slate-700"
+                        >
+                            Type de compte
+                        </label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="relative cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="role"
+                                    value="utilisateur"
+                                    checked
+                                    class="sr-only"
+                                />
+                                <div
+                                    class="rounded-lg border-2 border-emerald-600 bg-white p-4 text-center transition hover:bg-emerald-50 has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-600"
+                                >
+                                    <p class="font-semibold text-emerald-700">
+                                        Utilisateur
+                                    </p>
+                                    <p class="text-xs text-slate-600">
+                                        Suivi personnel
+                                    </p>
+                                </div>
+                            </label>
+
+                            <label class="relative cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="role"
+                                    value="pro"
+                                    class="sr-only"
+                                />
+                                <div
+                                    class="rounded-lg border-2 border-slate-300 bg-white p-4 text-center transition hover:bg-slate-50 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50"
+                                >
+                                    <p class="font-semibold text-blue-600">
+                                        Professionnel
+                                    </p>
+                                    <p class="text-xs text-slate-600">
+                                        Partager expertise
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* ERROR MESSAGE */}
+                    {
+                        error && (
+                            <div class="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+                                {error}
+                            </div>
+                        )
+                    }
+
+                    {/* SUBMIT BUTTON */}
+                    <button
+                        type="submit"
+                        class="w-full rounded-lg bg-emerald-600 py-3 font-bold text-white transition hover:bg-emerald-700 active:scale-95"
+                    >
+                        Créer mon compte
+                    </button>
+                </form>
+            </div>
+
+            {/* LOGIN LINK */}
+            <div class="text-center">
+                <p class="text-sm text-slate-600">
+                    Déjà un compte ?{" "}
+                    <a
+                        href="/authPassword"
+                        class="font-semibold text-emerald-600 hover:text-emerald-700"
+                    >
+                        Connectez-vous
+                    </a>
+                </p>
+            </div>
+        </div>
+    </section>
+</Layout>
+---
+
+<Layout titre="Inscription">
+    <section
+        class="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 to-blue-50 px-4 py-12"
+    >
+        <div class="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
+            {/* HEADER */}
+            <div class="mb-8 text-center">
+                <div class="mb-4 flex justify-center">
+                    <Logo class="h-12 w-auto" />
+                </div>
+                <h2 class="text-center text-sm font-semibold text-slate-600">
+                    Créez votre compte gratuit
+                </h2>
+            </div>
+
+            {/* FORM */}
+            <div class="mb-8">
+                <h3 class="mb-1 font-semibold text-slate-900">Inscription</h3>
+                <p class="mb-6 text-sm text-slate-600">
+                    Rejoignez notre communauté de passionnés de nutrition
+                </p>
+
+                <form method="post" class="space-y-5">
+                    {/* FIRSTNAME & LASTNAME */}
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label
+                                for="firstName"
+                                class="mb-2 block text-sm font-semibold text-slate-700"
+                            >
+                                Prénom
+                            </label>
+                            <div class="relative">
+                                <svg
+                                    class="absolute left-3 top-2.5 h-5 w-5 text-slate-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                    >
+                                    </path>
+                                </svg>
+                                <input
+                                    type="text"
+                                    id="firstName"
+                                    name="firstName"
+                                    placeholder="Jean"
+                                    required
+                                    class="w-full rounded-lg bg-slate-100 py-2 pl-10 pr-4 text-slate-900 placeholder-slate-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label
+                                for="lastName"
+                                class="mb-2 block text-sm font-semibold text-slate-700"
+                            >
+                                Nom
+                            </label>
+                            <div class="relative">
+                                <svg
+                                    class="absolute left-3 top-2.5 h-5 w-5 text-slate-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                    >
+                                    </path>
+                                </svg>
+                                <input
+                                    type="text"
+                                    id="lastName"
+                                    name="lastName"
+                                    placeholder="Dupont"
+                                    required
+                                    class="w-full rounded-lg bg-slate-100 py-2 pl-10 pr-4 text-slate-900 placeholder-slate-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* EMAIL */}
+                    <div>
+                        <label
+                            for="email"
+                            class="mb-2 block text-sm font-semibold text-slate-700"
+                        >
+                            Email
+                        </label>
+                        <div class="relative">
+                            <svg
+                                class="absolute left-3 top-2.5 h-5 w-5 text-slate-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                >
+                                </path>
+                            </svg>
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                placeholder="votre@email.fr"
+                                required
+                                class="w-full rounded-lg bg-slate-100 py-2 pl-10 pr-4 text-slate-900 placeholder-slate-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                            />
+                        </div>
+                    </div>
+
+                    {/* PASSWORD */}
+                    <div>
+                        <label
+                            for="password"
+                            class="mb-2 block text-sm font-semibold text-slate-700"
+                        >
+                            Mot de passe
+                        </label>
+                        <div class="relative">
+                            <svg
+                                class="absolute left-3 top-2.5 h-5 w-5 text-slate-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                >
+                                </path>
+                            </svg>
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                placeholder="••••••••"
+                                required
+                                minlength="5"
+                                class="w-full rounded-lg bg-slate-100 py-2 pl-10 pr-4 text-slate-900 placeholder-slate-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                            />
+                        </div>
+                    </div>
+
+                    {/* PASSWORD CONFIRM */}
+                    <div>
+                        <label
+                            for="passwordConfirm"
+                            class="mb-2 block text-sm font-semibold text-slate-700"
+                        >
+                            Confirmer le mot de passe
+                        </label>
+                        <div class="relative">
+                            <svg
+                                class="absolute left-3 top-2.5 h-5 w-5 text-slate-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                >
+                                </path>
+                            </svg>
+                            <input
+                                type="password"
+                                id="passwordConfirm"
+                                name="passwordConfirm"
+                                placeholder="••••••••"
+                                required
+                                minlength="5"
+                                class="w-full rounded-lg bg-slate-100 py-2 pl-10 pr-4 text-slate-900 placeholder-slate-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                            />
+                        </div>
+                    </div>
+
+                    {/* ACCOUNT TYPE */}
+                    <div>
+                        <label
+                            class="mb-3 block text-sm font-semibold text-slate-700"
+                        >
+                            Type de compte
+                        </label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="relative cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="role"
+                                    value="utilisateur"
+                                    checked
+                                    class="sr-only"
+                                />
+                                <div
+                                    class="rounded-lg border-2 border-emerald-600 bg-white p-4 text-center transition hover:bg-emerald-50 has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-600"
+                                >
+                                    <p class="font-semibold text-emerald-700">
+                                        Utilisateur
+                                    </p>
+                                    <p class="text-xs text-slate-600">
+                                        Suivi personnel
+                                    </p>
+                                </div>
+                            </label>
+
+                            <label class="relative cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="role"
+                                    value="pro"
+                                    class="sr-only"
+                                />
+                                <div
+                                    class="rounded-lg border-2 border-slate-300 bg-white p-4 text-center transition hover:bg-slate-50 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50"
+                                >
+                                    <p class="font-semibold text-blue-600">
+                                        Professionnel
+                                    </p>
+                                    <p class="text-xs text-slate-600">
+                                        Partager expertise
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* ERROR MESSAGE */}
+                    {
+                        error && (
+                            <div class="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+                                {error}
+                            </div>
+                        )
+                    }
+
+                    {/* SUBMIT BUTTON */}
+                    <button
+                        type="submit"
+                        class="w-full rounded-lg bg-emerald-600 py-3 font-bold text-white transition hover:bg-emerald-700 active:scale-95"
+                    >
+                        Créer mon compte
+                    </button>
+                </form>
+            </div>
+
+            {/* LOGIN LINK */}
+            <div class="text-center">
+                <p class="text-sm text-slate-600">
+                    Déjà un compte ?{" "}
+                    <a
+                        href="/authPassword"
+                        class="font-semibold text-emerald-600 hover:text-emerald-700"
+                    >
+                        Connectez-vous
+                    </a>
+                </p>
+            </div>
+        </div>
+    </section>
+</Layout>

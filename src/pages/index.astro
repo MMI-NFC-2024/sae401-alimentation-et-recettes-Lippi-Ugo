@@ -49,6 +49,9 @@ const favoriRecettes: RecetteResponse[] = favoris
 	)
 	.filter((r): r is RecetteResponse => Boolean(r))
 	.slice(0, 3);
+
+// Liste des IDs des recettes favorites pour vérifier rapidement
+const favoriRecetteIds = new Set(favoris.map((f) => f.recette_id));
 ---
 
 <Layout titre="Accueil">
@@ -61,7 +64,7 @@ const favoriRecettes: RecetteResponse[] = favoris
 						<div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 							<div>
 								<h1 class="mb-2 leading-tight text-slate-900">
-									Bienvenue, {user.nom} 👋
+									Bienvenue, {user.prenom} 👋
 								</h1>
 								<p class="text-(--color-text-muted) mb-8 text-lg">
 									Continuez votre parcours nutritionnel avec
@@ -119,7 +122,12 @@ const favoriRecettes: RecetteResponse[] = favoris
 
 									<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
 										{recettesPopulaires.map((recette) => (
-											<CardRecette recette={recette} />
+											<CardRecette
+												recette={recette}
+												isFavorited={favoriRecetteIds.has(
+													recette.id,
+												)}
+											/>
 										))}
 									</div>
 								</div>
@@ -363,7 +371,12 @@ const favoriRecettes: RecetteResponse[] = favoris
 
 						<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
 							{recettesAffichees.map((recette) => (
-								<CardRecette recette={recette} />
+								<CardRecette
+									recette={recette}
+									isFavorited={favoriRecetteIds.has(
+										recette.id,
+									)}
+								/>
 							))}
 						</div>
 					</div>
