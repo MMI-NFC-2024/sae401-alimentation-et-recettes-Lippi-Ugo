@@ -1,0 +1,99 @@
+---
+import Logo from "../assets/nutrirecette_logo.svg";
+
+const currentPath = new URL(Astro.request.url).pathname;
+
+const isActive = (href: string) => {
+    return currentPath === href || currentPath.startsWith(href + "/");
+};
+---
+
+<header
+    class="flex items-center justify-between px-4 gap-8 border-b-2 border-b-slate-200 h-20 bg-white sticky top-0 z-50"
+>
+    <a href="/">
+        <Logo class="w-32 h-auto" />
+    </a>
+
+    <div class="flex items-center gap-7 ml-auto">
+        <nav
+            id="menu"
+            class="h-screen px-6 py-12 flex flex-col fixed z-10 inset-0 top-20 bg-slate-50 visible opacity-100 max-lg:aria-hidden:invisible max-lg:aria-hidden:opacity-0 lg:bg-transparent lg:static lg:h-auto lg:px-0 lg:py-0 lg:flex-row lg:top-auto"
+            aria-hidden="true"
+        >
+            <ul class="flex flex-col gap-4 lg:flex-row lg:gap-6">
+                <li>
+                    <a
+                        class={`block p-4 lg:p-0 rounded-lg font-medium transition-colors ${isActive("/") ? "text-(--color-primary) font-bold" : "text-slate-600"}`}
+                        href="/">Accueil</a
+                    >
+                </li>
+                <li>
+                    <a
+                        class={`block p-4 lg:p-0 rounded-lg font-medium transition-colors ${isActive("/recettes") ? "text-(--color-primary) font-bold" : "text-slate-600"}`}
+                        href="/recettes">Recettes</a
+                    >
+                </li>
+                <li>
+                    <a
+                        class={`block p-4 lg:p-0 rounded-lg font-medium transition-colors ${isActive("/regimes") ? "text-(--color-primary) font-bold" : "text-slate-600"}`}
+                        href="/regimes">Régimes</a
+                    >
+                </li>
+                <li>
+                    <a
+                        class={`block p-4 lg:p-0 rounded-lg font-medium transition-colors ${isActive("/conseils") ? "text-(--color-primary) font-bold" : "text-slate-600"}`}
+                        href="/conseils">Conseils</a
+                    >
+                </li>
+                <li>
+                    <a
+                        class={`block p-4 lg:p-0 rounded-lg font-medium transition-colors ${isActive("/aliments") ? "text-(--color-primary) font-bold" : "text-slate-600"}`}
+                        href="/aliments">Aliments</a
+                    >
+                </li>
+            </ul>
+        </nav>
+
+        <a
+            href="/authPassword"
+            class="bg-(--color-primary) hover:bg-(--color-primary-hover) text-white font-semibold px-4 py-2 rounded-lg transition-colors text-sm lg:px-6 lg:py-3 lg:text-base"
+        >
+            {Astro.locals.pb.authStore.isValid ? "Mon compte" : "Se connecter"}
+        </a>
+        <button
+            id="menu-btn"
+            class="group relative z-10 flex h-6 w-6 flex-col justify-between *:block *:ease *:h-0.5 *:w-full *:transform *:rounded-full *:bg-slate-600 *:transition *:duration-300 lg:hidden"
+            aria-label="Menu"
+            aria-controls="menu"
+            aria-expanded="false"
+        >
+            <span
+                class="group-aria-expanded:translate-y-[10.75px] group-aria-expanded:rotate-45"
+            ></span>
+            <span class="group-aria-expanded:opacity-0"></span>
+            <span
+                class="group-aria-expanded:-translate-y-[10.75px] group-aria-expanded:-rotate-45"
+            ></span>
+        </button>
+    </div>
+</header>
+
+<script>
+    // On cible les éléments à modifier
+    const toggle = document.querySelector("#menu-btn");
+    const nav = document.querySelector("#menu");
+    const page = document.body;
+
+    // Vérifier si les éléments existent avant d'ajouter l'événement
+    if (toggle && nav) {
+        toggle.addEventListener("click", () => {
+            const isOpen = toggle.ariaExpanded === "true";
+            const isClosed = !isOpen;
+            // Mise à jour des attributs ARIA pour accessibilité
+            toggle.ariaExpanded = String(isClosed);
+            nav.ariaHidden = String(isOpen);
+            page.classList.toggle("overflow-hidden", isClosed);
+        });
+    }
+</script>

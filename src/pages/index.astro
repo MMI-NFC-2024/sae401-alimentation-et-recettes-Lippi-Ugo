@@ -1,17 +1,160 @@
 ---
+import Layout from "../layouts/Layout.astro";
+import Plat from "../assets/plat_accueil.webp";
+import { Image } from "astro:assets";
+import CardRecette from "../components/CardRecette.astro";
 
+const recettes = await Astro.locals.pb.collection("recette").getFullList();
+const recettesAffichees = recettes.slice(0, 6);
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Layout titre="Accueil">
+	<section class="min-h-screen flex items-center">
+		<div class="container mx-auto px-6">
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+				<div>
+					<h1 class="mb-6 leading-tight text-slate-900">
+						<span class="font-medium">Adoptez une alimentation</span
+						>
+						<br />
+						<span class="font-semibold">saine & adaptée</span>
+						<br />
+						<span class="font-medium">à vos objectifs</span>
+					</h1>
+					<p class="text-(--color-text-muted) mb-8">
+						Découvrez des recettes équilibrées, des fiches aliments
+						détaillées et des conseils nutritionnels personnalisés
+						pour atteindre vos objectifs.
+					</p>
+					<div class="flex gap-4">
+						<a
+							href="/authPassword"
+							class="bg-(--color-primary-dark) hover:bg-(--color-primary-hover) text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+						>
+							Créer un compte gratuit →
+						</a>
+						<a
+							href="/recettes"
+							class="border-2 border-(--color-primary-dark) text-(--color-primary-dark) hover:bg-(--color-primary-light) font-semibold px-6 py-3 rounded-lg transition-colors"
+						>
+							Explorer les recettes
+						</a>
+					</div>
+				</div>
+
+				<div class="flex justify-center">
+					<div class="rounded-2xl shadow-2xl overflow-hidden">
+						<Image
+							src={Plat}
+							alt="Plat sain équilibré"
+							class="w-full h-auto"
+						/>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section class="w-full py-20 bg-(--color-bg-light)">
+		<div class="container mx-auto px-6">
+			<div class="text-center mb-16">
+				<h2 class="mb-4 text-slate-900">
+					Pourquoi rejoindre NutriRecette ?
+				</h2>
+				<p class="text-(--color-text-muted) text-lg">
+					Créez un compte gratuit pour accéder à toutes nos
+					fonctionnalités
+				</p>
+			</div>
+
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+				<div
+					class="bg-white rounded-2xl border border-slate-200 p-8 hover:shadow-lg transition-shadow"
+				>
+					<h4 class="text-(--color-text-dark) mb-4 font-semibold">
+						Favoris personnalisés
+					</h4>
+					<p class="text-(--color-text-muted)">
+						Sauvegardez vos recettes et aliments préférés pour les
+						retrouver facilement
+					</p>
+				</div>
+
+				<div
+					class="bg-white rounded-2xl border border-slate-200 p-8 hover:shadow-lg transition-shadow"
+				>
+					<h4 class="text-(--color-text-dark) mb-4 font-semibold">
+						Suivi nutritionnel
+					</h4>
+					<p class="text-(--color-text-muted)">
+						Suivez vos apports caloriques et macronutriments
+						quotidiens avec notre tableau de bord
+					</p>
+				</div>
+
+				<div
+					class="bg-white rounded-2xl border border-slate-200 p-8 hover:shadow-lg transition-shadow"
+				>
+					<h4 class="text-(--color-text-dark) mb-4 font-semibold">
+						Conseils personnalisés
+					</h4>
+					<p class="text-(--color-text-muted)">
+						Recevez des recommandations adaptées à vos objectifs
+						nutritionnels
+					</p>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section class="w-full py-20 bg-(--color-bg-light)">
+		<div class="container mx-auto px-6">
+			<div class="mb-6 flex items-center justify-between gap-4">
+				<h2 class="text-slate-900">Recettes à découvrir</h2>
+				<a
+					href="/recettes"
+					class="text-sm font-semibold text-(--color-primary-dark) hover:text-(--color-primary)"
+				>
+					Voir toutes →
+				</a>
+			</div>
+
+			<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+				{
+					recettesAffichees.map((recette) => (
+						<CardRecette recette={recette} />
+					))
+				}
+			</div>
+		</div>
+	</section>
+
+	<section class="w-full bg-(--color-primary-dark) py-16 text-white mb-20">
+		<div class="container mx-auto px-6 text-center">
+			<h2 class="mb-3 text-white">
+				Prêt à commencer votre transformation ?
+			</h2>
+			<p
+				class="mx-auto mb-8 max-w-2xl text-base text-emerald-100 lg:text-lg"
+			>
+				Rejoignez des milliers d'utilisateurs qui ont atteint leurs
+				objectifs nutritionnels
+			</p>
+			<a
+				href="/authPassword"
+				class="inline-block rounded-lg bg-white px-8 py-3 font-semibold text-(--color-primary-dark) transition hover:bg-emerald-50"
+			>
+				Créer mon compte gratuit →
+			</a>
+			<p class="mt-5 text-sm text-emerald-100">
+				Déjà membre ?
+				<a
+					href="/authPassword"
+					class="underline underline-offset-2 hover:text-white"
+				>
+					Se connecter
+				</a>
+			</p>
+		</div>
+	</section>
+</Layout>

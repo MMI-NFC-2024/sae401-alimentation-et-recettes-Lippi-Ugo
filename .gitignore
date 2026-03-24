@@ -22,3 +22,12 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# pocketbase mcp
+pocketbase-mcp/
+pocketbase-mcp/build/
+.vscode/mcp.json
+
+# pocketbase local db
+pocketbase/*
+!pocketbase/pb_migrations/

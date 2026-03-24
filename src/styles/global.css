@@ -1,1 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+
+:root {
+  /* Primary colors */
+  --color-primary: #00A63E;
+  --color-primary-light: #f0fdf4;
+  --color-primary-dark: #008236;
+  --color-primary-hover: #008a31;
+  
+  /* Dark mode */
+  --color-dark-bg: #101828;
+  --color-dark-text: #D1D5DC;
+  
+  /* Text colors */
+  --color-text-muted: #4A5565;
+  --color-text-dark: #0A0A0A;
+  
+  /* Background colors */
+  --color-bg-light: #F9FAFB;
+}
+
+html {
+  font-family: Inter, sans-serif;
+  font-weight: 400;
+}
+
+h1 {
+  font-size: 48px;
+  font-weight: 400;
+}
+
+h2 {
+  font-size: 30px;
+  font-weight: 600;
+}
+
+h4 {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+p {
+  font-size: 18px;
+  font-weight: 400;
+}
+
+footer p,
+footer a {
+  font-size: 14px;
+}
+
+/* Color utility classes */
+.text-primary {
+  color: var(--color-primary);
+}
+
+.text-primary-dark {
+  color: var(--color-primary-dark);
+}
+
+.text-primary-light {
+  color: var(--color-primary-light);
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+.text-dark {
+  color: var(--color-text-dark);
+}
+
+.bg-primary {
+  background-color: var(--color-primary);
+}
+
+.bg-primary-dark {
+  background-color: var(--color-primary-dark);
+}
+
+.bg-primary-light {
+  background-color: var(--color-primary-light);
+}
+
+.bg-dark {
+  background-color: var(--color-dark-bg);
+}
+
+.bg-light {
+  background-color: var(--color-bg-light);
+}
+
+.border-primary {
+  border-color: var(--color-primary);
+}
+
+.border-primary-dark {
+  border-color: var(--color-primary-dark);
+}
