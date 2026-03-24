@@ -151,7 +151,6 @@ export enum RecetteRegimeOptions {
 	"Végétarien" = "Végétarien",
 	"Vegan" = "Vegan",
 	"Keto" = "Keto",
-	"Low carb" = "Low carb",
 	"Paléo" = "Paléo",
 	"Méditerranéen" = "Méditerranéen",
 }
