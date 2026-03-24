@@ -31,3 +31,5 @@ pocketbase-mcp/build/
 # pocketbase local db
 pocketbase/*
 !pocketbase/pb_migrations/
+# Local Netlify folder
+.netlify
