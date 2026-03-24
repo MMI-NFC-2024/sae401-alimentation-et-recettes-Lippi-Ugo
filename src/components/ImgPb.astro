@@ -1,16 +1,29 @@
 ---
-const { record, field = "photo", alt, classPicture, classImg, thumb = "1024x1024" } = Astro.props;
+const {
+  record,
+  field = "photo",
+  alt,
+  classPicture,
+  classImg,
+  thumb = "1024x1024",
+} = Astro.props;
 
 const pb = Astro.locals.pb;
-const imageUrl = record?.[field] ? pb.files.getURL(record, record[field], { thumb }) : null;
+const imageUrl = record?.[field]
+  ? pb.files.getURL(record, record[field], { thumb })
+  : null;
 ---
 
-{imageUrl ? (
-  <div class={classPicture}>
-    <img class={classImg} alt={alt || "Image"} src={imageUrl}/>
-  </div>
-) : (
-  <div class={classPicture + " w-full h-full flex items-center justify-center bg-gray-200"}>
-    <span class="text-gray-500">Image non disponible</span>
-  </div>
-)}
+{
+  imageUrl ? (
+    <div class={classPicture}>
+      <img class={classImg} alt={alt || "Image"} src={imageUrl} />
+    </div>
+  ) : (
+    <div
+      class={`${classPicture || ""} w-full flex items-center justify-center bg-gray-200`}
+    >
+      <span class="text-gray-500">Image non disponible</span>
+    </div>
+  )
+}

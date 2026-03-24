@@ -1,0 +1,75 @@
+---
+import ImgPb from "./ImgPb.astro";
+import type { ProduitSponsoriseResponse } from "../pocketbase-types";
+
+interface Props {
+    produit: ProduitSponsoriseResponse;
+}
+
+const { produit } = Astro.props;
+---
+
+<article
+    class="relative flex h-full flex-col overflow-hidden rounded-3xl border-2 border-amber-200 bg-amber-50/30 p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+>
+    <span
+        class="absolute right-0 top-0 rounded-bl-2xl rounded-tr-2xl bg-amber-500 px-4 py-1 text-sm font-semibold text-white"
+    >
+        Sponsorise
+    </span>
+
+    <ImgPb
+        record={produit}
+        field="image"
+        alt={produit.nom}
+        classPicture="mb-5 h-64 w-full shrink-0 overflow-hidden rounded-2xl bg-slate-200"
+        classImg="h-full w-full object-cover"
+        thumb="1000x700"
+    />
+
+    <div class="flex flex-1 flex-col">
+        <h3 class="mb-3 text-xl font-bold leading-tight text-slate-900">
+            {produit.nom}
+        </h3>
+
+        <p class="mb-6 line-clamp-3 text-base leading-snug text-slate-600">
+            {
+                produit.description ||
+                    "Produit recommande pour faciliter votre quotidien nutritionnel."
+            }
+        </p>
+
+        <div class="mt-auto flex items-end justify-between gap-4">
+            <p class="text-5xl font-bold text-(--color-primary)">
+                {produit.prix || "Prix non renseigne"}
+            </p>
+
+            {
+                produit.lien_affiliation ? (
+                    <a
+                        href={produit.lien_affiliation}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex items-center gap-2 text-xl font-medium text-amber-700 hover:text-amber-800"
+                    >
+                        En savoir plus
+                        <svg
+                            class="h-5 w-5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path d="M7 17L17 7" />
+                            <path d="M8 7h9v9" />
+                        </svg>
+                    </a>
+                ) : (
+                    <span class="text-base text-slate-500">
+                        Lien indisponible
+                    </span>
+                )
+            }
+        </div>
+    </div>
+</article>
