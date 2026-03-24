@@ -3,158 +3,399 @@ import Layout from "../layouts/Layout.astro";
 import Plat from "../assets/plat_accueil.webp";
 import { Image } from "astro:assets";
 import CardRecette from "../components/CardRecette.astro";
+import type { RecetteResponse, AlimentResponse } from "../pocketbase-types";
 
-const recettes = await Astro.locals.pb.collection("recette").getFullList();
-const recettesAffichees = recettes.slice(0, 6);
+const user = Astro.locals.pb.authStore.model;
+const recettes = await Astro.locals.pb
+	.collection("recette")
+	.getFullList<RecetteResponse>();
+const aliments = await Astro.locals.pb
+	.collection("aliment")
+	.getFullList<AlimentResponse>();
+
+let favoris: any[] = [];
+let conseilDuJour: any = null;
+
+if (user) {
+	try {
+		favoris = await Astro.locals.pb.collection("favoris").getFullList({
+			filter: `utilisateur_id = "${user.id}"`,
+			expand: "recette_id",
+		});
+	} catch (e) {
+		console.error("Erreur favoris:", e);
+		favoris = [];
+	}
+
+	try {
+		const conseils = await Astro.locals.pb
+			.collection("conseil")
+			.getFullList({ limit: 1 });
+		if (conseils.length > 0) {
+			conseilDuJour = conseils[0];
+		}
+	} catch (e) {
+		conseilDuJour = null;
+	}
+}
+
+const recettesPopulaires: RecetteResponse[] = recettes.slice(0, 4);
+const recettesAffichees: RecetteResponse[] = recettes.slice(0, 6);
+const alimentsAf: AlimentResponse[] = aliments.slice(0, 4);
+const favoriRecettes: RecetteResponse[] = favoris
+	.map(
+		(f) =>
+			f.expand?.recette_id || recettes.find((r) => r.id === f.recette_id),
+	)
+	.filter((r): r is RecetteResponse => Boolean(r))
+	.slice(0, 3);
 ---
 
 <Layout titre="Accueil">
-	<section class="min-h-screen flex items-center">
-		<div class="container mx-auto px-6">
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-				<div>
-					<h1 class="mb-6 leading-tight text-slate-900">
-						<span class="font-medium">Adoptez une alimentation</span
-						>
-						<br />
-						<span class="font-semibold">saine & adaptée</span>
-						<br />
-						<span class="font-medium">à vos objectifs</span>
-					</h1>
-					<p class="text-(--color-text-muted) mb-8">
-						Découvrez des recettes équilibrées, des fiches aliments
-						détaillées et des conseils nutritionnels personnalisés
-						pour atteindre vos objectifs.
-					</p>
-					<div class="flex gap-4">
+	{
+		user ? (
+			<>
+				{/* PAGE UTILISATEUR CONNECTÉ */}
+				<section class="min-h-150 flex items-center py-12">
+					<div class="container mx-auto px-6">
+						<div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+							<div>
+								<h1 class="mb-2 leading-tight text-slate-900">
+									Bienvenue, {user.nom} 👋
+								</h1>
+								<p class="text-(--color-text-muted) mb-8 text-lg">
+									Continuez votre parcours nutritionnel avec
+									de nouvelles recettes et conseils
+									personnalisés adaptés à vos objectifs.
+								</p>
+								<div class="flex gap-4 flex-wrap">
+									{user && !user.role?.includes("pro") && (
+										<a
+											href="/dashboard"
+											class="bg-(--color-primary-dark) hover:bg-(--color-primary-hover) text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+										>
+											Voir mon tableau de bord →
+										</a>
+									)}
+									<a
+										href="/recettes"
+										class="border-2 border-(--color-primary-dark) text-(--color-primary-dark) hover:bg-(--color-primary-light) font-semibold px-6 py-3 rounded-lg transition-colors"
+									>
+										Explorer les recettes
+									</a>
+								</div>
+							</div>
+
+							<div class="flex justify-center">
+								<div class="rounded-2xl shadow-2xl overflow-hidden">
+									<Image
+										src={Plat}
+										alt="Plat sain équilibré"
+										class="w-full h-auto"
+									/>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+
+				<section class="w-full py-12 bg-white">
+					<div class="container mx-auto px-6">
+						<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+							<div class="lg:col-span-2 space-y-12">
+								{/* RECETTES POPULAIRES */}
+								<div>
+									<div class="mb-6 flex items-center justify-between gap-4">
+										<h2 class="text-slate-900">
+											Recettes Populaires
+										</h2>
+										<a
+											href="/recettes"
+											class="text-sm font-semibold text-(--color-primary-dark) hover:text-(--color-primary)"
+										>
+											Voir toutes →
+										</a>
+									</div>
+
+									<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+										{recettesPopulaires.map((recette) => (
+											<CardRecette recette={recette} />
+										))}
+									</div>
+								</div>
+
+								{/* FICHES ALIMENTS */}
+								<div>
+									<div class="mb-6 flex items-center justify-between gap-4">
+										<h2 class="text-slate-900">
+											Fiches Aliments
+										</h2>
+										<a
+											href="/aliments"
+											class="text-sm font-semibold text-(--color-primary-dark) hover:text-(--color-primary)"
+										>
+											Voir toutes →
+										</a>
+									</div>
+
+									<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+										{alimentsAf.map((aliment) => (
+											<a
+												href={`/aliments/${aliment.id}`}
+												class="rounded-lg border border-slate-200 bg-slate-50 p-4 hover:shadow-md transition-shadow"
+											>
+												<p class="font-semibold text-slate-900">
+													{aliment.nom}
+												</p>
+												<p class="text-xs text-(--color-text-muted) mt-1">
+													{aliment.calories_100g || 0}{" "}
+													cal/100g
+												</p>
+											</a>
+										))}
+									</div>
+								</div>
+							</div>
+
+							{/* COLONNE DROITE - SIDEBAR */}
+							<div class="space-y-6">
+								{/* MON SUIVI - Seulement pour utilisateurs (pas pros) */}
+								{user && !user.role?.includes("pro") && (
+									<div class="bg-(--color-bg-light) rounded-2xl border border-slate-200 p-6">
+										<h3 class="mb-3 text-slate-900 font-semibold">
+											Mon Suivi
+										</h3>
+										<p class="text-(--color-text-muted) mb-4 text-sm">
+											Suivre votre progression
+											nutritionnelle
+										</p>
+										<a
+											href="/dashboard"
+											class="block text-center w-full bg-(--color-primary-dark) hover:bg-(--color-primary-hover) text-white font-semibold px-4 py-2 rounded-lg transition-colors text-sm"
+										>
+											Accéder au tableau de bord →
+										</a>
+									</div>
+								)}
+
+								{/* MES FAVORIS */}
+								<div class="bg-(--color-bg-light) rounded-2xl border border-slate-200 p-6">
+									<div class="mb-4 flex items-center justify-between gap-4">
+										<h3 class="text-slate-900 font-semibold">
+											Mes Favoris
+										</h3>
+										<a
+											href="/recettes?filter=favoris"
+											class="text-xs font-semibold text-(--color-primary-dark) hover:text-(--color-primary)"
+										>
+											Voir tous →
+										</a>
+									</div>
+									{favoriRecettes.length > 0 ? (
+										<div class="space-y-2">
+											{favoriRecettes.map((recette) => (
+												<a
+													href={`/recettes/${recette.id}`}
+													class="block p-2 rounded-lg border border-slate-200 hover:border-(--color-primary-dark) hover:bg-white transition-colors"
+												>
+													<p class="font-medium text-slate-900 text-sm">
+														{recette.nom}
+													</p>
+													<p class="text-xs text-(--color-text-muted)">
+														{recette.nb_parts
+															? `${recette.nb_parts} parts`
+															: "Recette"}{" "}
+														•{" "}
+														{recette.calories_par_part
+															? `${recette.calories_par_part} kcal/part`
+															: ""}
+													</p>
+												</a>
+											))}
+										</div>
+									) : (
+										<p class="text-(--color-text-muted) text-sm">
+											Vous n'avez pas encore de recettes
+											favorites
+										</p>
+									)}
+								</div>
+
+								{/* CONSEILS DU JOUR */}
+								{conseilDuJour && (
+									<div class="bg-(--color-bg-light) rounded-2xl border border-slate-200 p-6">
+										<h3 class="mb-3 text-slate-900 font-semibold">
+											Conseils du jour
+										</h3>
+										<div
+											class="text-(--color-text-muted) text-sm mb-4"
+											set:html={
+												conseilDuJour.contenu ||
+												"<p>Découvrez les derniers conseils nutritionnels</p>"
+											}
+										/>
+										<a
+											href="/conseils"
+											class="inline-block text-xs font-semibold text-(--color-primary-dark) hover:text-(--color-primary)"
+										>
+											Lire les conseils →
+										</a>
+									</div>
+								)}
+							</div>
+						</div>
+					</div>
+				</section>
+			</>
+		) : (
+			<>
+				{/* PAGE UTILISATEUR NON CONNECTÉ */}
+				<section class="min-h-screen flex items-center">
+					<div class="container mx-auto px-6">
+						<div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+							<div>
+								<h1 class="mb-6 leading-tight text-slate-900">
+									<span class="font-medium">
+										Adoptez une alimentation
+									</span>
+									<br />
+									<span class="font-semibold">
+										saine & adaptée
+									</span>
+									<br />
+									<span class="font-medium">
+										à vos objectifs
+									</span>
+								</h1>
+								<p class="text-(--color-text-muted) mb-8">
+									Découvrez des recettes équilibrées, des
+									fiches aliments détaillées et des conseils
+									nutritionnels personnalisés pour atteindre
+									vos objectifs.
+								</p>
+								<div class="flex gap-4">
+									<a
+										href="/authPassword"
+										class="bg-(--color-primary-dark) hover:bg-(--color-primary-hover) text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+									>
+										Créer un compte gratuit →
+									</a>
+									<a
+										href="/recettes"
+										class="border-2 border-(--color-primary-dark) text-(--color-primary-dark) hover:bg-(--color-primary-light) font-semibold px-6 py-3 rounded-lg transition-colors"
+									>
+										Explorer les recettes
+									</a>
+								</div>
+							</div>
+
+							<div class="flex justify-center">
+								<div class="rounded-2xl shadow-2xl overflow-hidden">
+									<Image
+										src={Plat}
+										alt="Plat sain équilibré"
+										class="w-full h-auto"
+									/>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+
+				<section class="w-full py-20 bg-(--color-bg-light)">
+					<div class="container mx-auto px-6">
+						<div class="text-center mb-16">
+							<h2 class="mb-4 text-slate-900">
+								Pourquoi rejoindre NutriRecette ?
+							</h2>
+							<p class="text-(--color-text-muted) text-lg">
+								Créez un compte gratuit pour accéder à toutes
+								nos fonctionnalités
+							</p>
+						</div>
+
+						<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+							<div class="bg-white rounded-2xl border border-slate-200 p-8 hover:shadow-lg transition-shadow">
+								<h4 class="text-(--color-text-dark) mb-4 font-semibold">
+									Favoris personnalisés
+								</h4>
+								<p class="text-(--color-text-muted)">
+									Sauvegardez vos recettes et aliments
+									préférés pour les retrouver facilement
+								</p>
+							</div>
+
+							<div class="bg-white rounded-2xl border border-slate-200 p-8 hover:shadow-lg transition-shadow">
+								<h4 class="text-(--color-text-dark) mb-4 font-semibold">
+									Suivi nutritionnel
+								</h4>
+								<p class="text-(--color-text-muted)">
+									Suivez vos apports caloriques et
+									macronutriments quotidiens avec notre
+									tableau de bord
+								</p>
+							</div>
+
+							<div class="bg-white rounded-2xl border border-slate-200 p-8 hover:shadow-lg transition-shadow">
+								<h4 class="text-(--color-text-dark) mb-4 font-semibold">
+									Conseils personnalisés
+								</h4>
+								<p class="text-(--color-text-muted)">
+									Recevez des recommandations adaptées à vos
+									objectifs nutritionnels
+								</p>
+							</div>
+						</div>
+					</div>
+				</section>
+
+				<section class="w-full py-20 bg-(--color-bg-light)">
+					<div class="container mx-auto px-6">
+						<div class="mb-6 flex items-center justify-between gap-4">
+							<h2 class="text-slate-900">Recettes à découvrir</h2>
+							<a
+								href="/recettes"
+								class="text-sm font-semibold text-(--color-primary-dark) hover:text-(--color-primary)"
+							>
+								Voir toutes →
+							</a>
+						</div>
+
+						<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+							{recettesAffichees.map((recette) => (
+								<CardRecette recette={recette} />
+							))}
+						</div>
+					</div>
+				</section>
+
+				<section class="w-full bg-(--color-primary-dark) py-16 text-white mb-20">
+					<div class="container mx-auto px-6 text-center">
+						<h2 class="mb-3 text-white">
+							Prêt à commencer votre transformation ?
+						</h2>
+						<p class="mx-auto mb-8 max-w-2xl text-base text-emerald-100 lg:text-lg">
+							Rejoignez des milliers d'utilisateurs qui ont
+							atteint leurs objectifs nutritionnels
+						</p>
 						<a
 							href="/authPassword"
-							class="bg-(--color-primary-dark) hover:bg-(--color-primary-hover) text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+							class="inline-block rounded-lg bg-white px-8 py-3 font-semibold text-(--color-primary-dark) transition hover:bg-emerald-50"
 						>
-							Créer un compte gratuit →
+							Créer mon compte gratuit →
 						</a>
-						<a
-							href="/recettes"
-							class="border-2 border-(--color-primary-dark) text-(--color-primary-dark) hover:bg-(--color-primary-light) font-semibold px-6 py-3 rounded-lg transition-colors"
-						>
-							Explorer les recettes
-						</a>
+						<p class="mt-5 text-sm text-emerald-100">
+							Déjà membre ?
+							<a
+								href="/authPassword"
+								class="underline underline-offset-2 hover:text-white"
+							>
+								Se connecter
+							</a>
+						</p>
 					</div>
-				</div>
-
-				<div class="flex justify-center">
-					<div class="rounded-2xl shadow-2xl overflow-hidden">
-						<Image
-							src={Plat}
-							alt="Plat sain équilibré"
-							class="w-full h-auto"
-						/>
-					</div>
-				</div>
-			</div>
-		</div>
-	</section>
-
-	<section class="w-full py-20 bg-(--color-bg-light)">
-		<div class="container mx-auto px-6">
-			<div class="text-center mb-16">
-				<h2 class="mb-4 text-slate-900">
-					Pourquoi rejoindre NutriRecette ?
-				</h2>
-				<p class="text-(--color-text-muted) text-lg">
-					Créez un compte gratuit pour accéder à toutes nos
-					fonctionnalités
-				</p>
-			</div>
-
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-				<div
-					class="bg-white rounded-2xl border border-slate-200 p-8 hover:shadow-lg transition-shadow"
-				>
-					<h4 class="text-(--color-text-dark) mb-4 font-semibold">
-						Favoris personnalisés
-					</h4>
-					<p class="text-(--color-text-muted)">
-						Sauvegardez vos recettes et aliments préférés pour les
-						retrouver facilement
-					</p>
-				</div>
-
-				<div
-					class="bg-white rounded-2xl border border-slate-200 p-8 hover:shadow-lg transition-shadow"
-				>
-					<h4 class="text-(--color-text-dark) mb-4 font-semibold">
-						Suivi nutritionnel
-					</h4>
-					<p class="text-(--color-text-muted)">
-						Suivez vos apports caloriques et macronutriments
-						quotidiens avec notre tableau de bord
-					</p>
-				</div>
-
-				<div
-					class="bg-white rounded-2xl border border-slate-200 p-8 hover:shadow-lg transition-shadow"
-				>
-					<h4 class="text-(--color-text-dark) mb-4 font-semibold">
-						Conseils personnalisés
-					</h4>
-					<p class="text-(--color-text-muted)">
-						Recevez des recommandations adaptées à vos objectifs
-						nutritionnels
-					</p>
-				</div>
-			</div>
-		</div>
-	</section>
-
-	<section class="w-full py-20 bg-(--color-bg-light)">
-		<div class="container mx-auto px-6">
-			<div class="mb-6 flex items-center justify-between gap-4">
-				<h2 class="text-slate-900">Recettes à découvrir</h2>
-				<a
-					href="/recettes"
-					class="text-sm font-semibold text-(--color-primary-dark) hover:text-(--color-primary)"
-				>
-					Voir toutes →
-				</a>
-			</div>
-
-			<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-				{
-					recettesAffichees.map((recette) => (
-						<CardRecette recette={recette} />
-					))
-				}
-			</div>
-		</div>
-	</section>
-
-	<section class="w-full bg-(--color-primary-dark) py-16 text-white mb-20">
-		<div class="container mx-auto px-6 text-center">
-			<h2 class="mb-3 text-white">
-				Prêt à commencer votre transformation ?
-			</h2>
-			<p
-				class="mx-auto mb-8 max-w-2xl text-base text-emerald-100 lg:text-lg"
-			>
-				Rejoignez des milliers d'utilisateurs qui ont atteint leurs
-				objectifs nutritionnels
-			</p>
-			<a
-				href="/authPassword"
-				class="inline-block rounded-lg bg-white px-8 py-3 font-semibold text-(--color-primary-dark) transition hover:bg-emerald-50"
-			>
-				Créer mon compte gratuit →
-			</a>
-			<p class="mt-5 text-sm text-emerald-100">
-				Déjà membre ?
-				<a
-					href="/authPassword"
-					class="underline underline-offset-2 hover:text-white"
-				>
-					Se connecter
-				</a>
-			</p>
-		</div>
-	</section>
+				</section>
+			</>
+		)
+	}
 </Layout>
